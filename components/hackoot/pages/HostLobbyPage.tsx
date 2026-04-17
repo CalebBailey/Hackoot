@@ -1,0 +1,225 @@
+"use client";
+
+import { useEffect, useRef, useState } from "react";
+import { useQuizStore } from "@/store/quizStore";
+import { useSessionStore } from "@/store/sessionStore";
+import { Button } from "../Button";
+import { RoomCodeDisplay } from "../RoomCodeDisplay";
+import { QrCode } from "../QrCode";
+import { navigate } from "../HackootApp";
+import { ArrowLeft, Play, Users, AlertCircle } from "lucide-react";
+import { generateRoomCode } from "@/utils/roomCode";
+import { generateUUID } from "@/lib/utils";
+import { HostPeer, isWebRTCSupported } from "@/transport/peer";
+
+interface HostLobbyPageProps {
+  quizId: string;
+}
+
+export function HostLobbyPage({ quizId }: HostLobbyPageProps) {
+  const getQuizById = useQuizStore((state) => state.getQuizById);
+  const quiz = getQuizById(quizId);
+
+  const session = useSessionStore((state) => state.session);
+  const initSession = useSessionStore((state) => state.initSession);
+  const setIsHost = useSessionStore((state) => state.setIsHost);
+  const addParticipant = useSessionStore((state) => state.addParticipant);
+  const peerError = useSessionStore((state) => state.peerError);
+  const setPeerError = useSessionStore((state) => state.setPeerError);
+
+  const hostPeerRef = useRef<HostPeer | null>(null);
+  const [connecting, setConnecting] = useState(true);
+
+  useEffect(() => {
+    if (!quiz) {
+      navigate("/");
+      return;
+    }
+
+    // Check WebRTC support before attempting to connect
+    if (!isWebRTCSupported()) {
+      setPeerError("Your browser does not support WebRTC. Please use Chrome, Firefox, Safari, or Edge.");
+      setConnecting(false);
+      return;
+    }
+
+    const roomCode = generateRoomCode();
+    const sessionId = generateUUID();
+
+    initSession(sessionId, quizId, roomCode);
+    setIsHost(true);
+
+    const hostPeer = new HostPeer();
+    hostPeerRef.current = hostPeer;
+
+    hostPeer.onPlayerJoin = (participantId, name) => {
+      addParticipant({
+        participantId,
+        name,
+        score: 0,
+        answeredCurrentQuestion: false,
+      });
+
+      // Broadcast lobby update to all players
+      const currentSession = useSessionStore.getState().session;
+      if (currentSession) {
+        hostPeer.broadcast({
+          type: "lobbyUpdate",
+          participants: currentSession.participants.map((p) => ({
+            id: p.participantId,
+            name: p.name,
+          })),
+        });
+      }
+    };
+
+    hostPeer.onError = (error) => {
+      setPeerError(error);
+      setConnecting(false);
+    };
+
+    hostPeer.connect(roomCode)
+      .then(() => {
+        setConnecting(false);
+      })
+      .catch((err) => {
+        setPeerError(err.message);
+        setConnecting(false);
+      });
+
+    // Store peer in window for access in other pages
+    (window as any).__hackootHostPeer = hostPeer;
+
+    return () => {
+      // Don't disconnect here - we need the peer for the game
+    };
+  }, [quiz, quizId, initSession, setIsHost, addParticipant, setPeerError]);
+
+  const handleStartQuiz = () => {
+    if (session && session.participants.length > 0) {
+      navigate(`/host/${quizId}/question`);
+    }
+  };
+
+  const handleBack = () => {
+    hostPeerRef.current?.disconnect();
+    (window as any).__hackootHostPeer = null;
+    navigate("/");
+  };
+
+  if (!quiz) {
+    return null;
+  }
+
+  if (peerError) {
+    return (
+      <div className="container mx-auto px-4 py-8 max-w-lg">
+        <div className="glass-card p-8 text-center">
+          <AlertCircle className="w-16 h-16 mx-auto mb-4 text-[#F43F5E]" />
+          <h2 className="text-xl font-heading font-bold text-[var(--text-primary)] mb-2">
+            Connection Error
+          </h2>
+          <p className="text-[var(--text-secondary)] mb-6">{peerError}</p>
+          <Button variant="primary" onClick={handleBack}>
+            Try Again
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
+  if (connecting || !session) {
+    return (
+      <div className="container mx-auto px-4 py-8 max-w-lg">
+        <div className="glass-card p-8 text-center">
+          <div className="animate-spin w-12 h-12 border-4 border-white/20 border-t-[var(--color-action)] rounded-full mx-auto mb-4" />
+          <p className="text-[var(--text-secondary)]">Setting up room...</p>
+        </div>
+      </div>
+    );
+  }
+
+  const joinUrl = `${window.location.origin}${window.location.pathname}#/join/${session.roomCode}`;
+
+  return (
+    <div className="container mx-auto px-4 py-8 max-w-2xl">
+      {/* Header */}
+      <div className="flex items-center gap-4 mb-8">
+        <button
+          onClick={handleBack}
+          className="p-2 rounded-lg glass-card hover:bg-white/10 transition-colors"
+          aria-label="Go back"
+        >
+          <ArrowLeft className="w-5 h-5 text-[var(--text-primary)]" />
+        </button>
+        <div>
+          <h1 className="text-2xl sm:text-3xl font-heading font-bold text-[var(--text-primary)]">
+            {quiz.title}
+          </h1>
+          <p className="text-sm text-[var(--text-secondary)]">
+            {quiz.questions.length} questions
+          </p>
+        </div>
+      </div>
+
+      {/* Room Code & QR */}
+      <div className="glass-card p-6 sm:p-8 mb-6 text-center">
+        <p className="text-[var(--text-secondary)] mb-2">Join at</p>
+        <p className="text-lg font-medium text-[var(--text-primary)] mb-4">
+          {window.location.host}
+        </p>
+        <div className="flex justify-center mb-6">
+          <RoomCodeDisplay code={session.roomCode} />
+        </div>
+        <div className="flex justify-center">
+          <QrCode value={joinUrl} size={180} />
+        </div>
+      </div>
+
+      {/* Participants */}
+      <div className="glass-card p-6 mb-6">
+        <div className="flex items-center gap-2 mb-4">
+          <Users className="w-5 h-5 text-[var(--text-secondary)]" />
+          <h2 className="text-lg font-heading font-semibold text-[var(--text-primary)]">
+            Players ({session.participants.length})
+          </h2>
+        </div>
+
+        {session.participants.length === 0 ? (
+          <p className="text-[var(--text-secondary)] text-center py-4">
+            Waiting for players to join...
+          </p>
+        ) : (
+          <div className="flex flex-wrap gap-2">
+            {session.participants.map((participant) => (
+              <span
+                key={participant.participantId}
+                className="px-3 py-1.5 rounded-full bg-white/10 text-[var(--text-primary)] text-sm font-medium fade-in"
+              >
+                {participant.name}
+              </span>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Start Button */}
+      <Button
+        variant="primary"
+        size="lg"
+        fullWidth
+        onClick={handleStartQuiz}
+        disabled={session.participants.length === 0}
+      >
+        <Play className="w-5 h-5 mr-2" />
+        Start Quiz
+      </Button>
+
+      {session.participants.length === 0 && (
+        <p className="text-center text-sm text-[var(--text-secondary)] mt-2">
+          At least 1 player required to start
+        </p>
+      )}
+    </div>
+  );
+}
