@@ -1,0 +1,2 @@
+# Hackoot
+Interactive Quiz Platform
