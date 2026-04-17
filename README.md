@@ -35,7 +35,7 @@ An interactive, real-time quiz platform supporting up to 50 simultaneous players
 npm install
 
 # Start the development server
-npm dev
+npm run dev
 ```
 
 Open [http://localhost:3000](http://localhost:3000) in your browser.
