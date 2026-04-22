@@ -78,6 +78,7 @@ html, body {
   margin: 0;
   padding: 0;
   min-height: 100vh;
+  overflow-x: hidden;
   font-family: 'Inter', sans-serif;
   color: var(--text-primary);
 }
@@ -214,6 +215,88 @@ html, body {
 
 .count-up {
   animation: count-up 0.5s ease-out forwards;
+}
+
+/* Page slide transition */
+@keyframes page-slide-in {
+  from {
+    opacity: 0;
+    transform: translateX(32px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.page-transition {
+  animation: page-slide-in 0.22s ease-out forwards;
+}
+
+/* Podium bar rise (grows upward from bottom) */
+@keyframes podium-rise {
+  from {
+    transform: scaleY(0);
+  }
+  to {
+    transform: scaleY(1);
+  }
+}
+
+.podium-bar {
+  transform-origin: bottom;
+  transform: scaleY(0);
+}
+
+.podium-bar-animate {
+  animation: podium-rise 0.55s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+
+/* 1st place bar - bouncier */
+.podium-bar-animate-first {
+  animation: podium-rise 0.65s cubic-bezier(0.34, 1.8, 0.64, 1) forwards;
+}
+
+/* Podium card drop-in from above */
+@keyframes podium-card-in {
+  from {
+    opacity: 0;
+    transform: translateY(-24px) scale(0.85);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.podium-card {
+  opacity: 0;
+}
+
+.podium-card-animate {
+  animation: podium-card-in 0.45s cubic-bezier(0.34, 1.4, 0.64, 1) forwards;
+}
+
+/* 1st place card - extra bounce */
+.podium-card-animate-first {
+  animation: podium-card-in 0.5s cubic-bezier(0.34, 1.8, 0.64, 1) forwards;
+}
+
+/* 1st place glow pulse after reveal */
+@keyframes winner-glow {
+  0%, 100% {
+    box-shadow: 0 0 0 0 rgba(245, 158, 11, 0);
+  }
+  50% {
+    box-shadow: 0 0 32px 12px rgba(245, 158, 11, 0.35);
+  }
+}
+
+/* Combined: card drops in, then glows - avoids animation property conflict */
+.podium-card-animate-first-winner {
+  animation:
+    podium-card-in 0.5s cubic-bezier(0.34, 1.8, 0.64, 1) forwards,
+    winner-glow 1.6s ease-in-out 0.5s infinite;
 }
 
 /* Dark select elements */
