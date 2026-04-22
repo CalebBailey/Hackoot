@@ -1,7 +1,17 @@
 "use client";
 
+import { useState } from "react";
 import { Question } from "@/types";
-import { GripVertical, Trash2, Check } from "lucide-react";
+import { GripVertical, Trash2, Check, Image, X } from "lucide-react";
+
+function isValidImageUrl(url: string): boolean {
+  try {
+    const parsed = new URL(url);
+    return parsed.protocol === "https:" || parsed.protocol === "http:";
+  } catch {
+    return false;
+  }
+}
 
 interface QuestionEditorProps {
   question: Question;
@@ -16,6 +26,9 @@ export function QuestionEditor({
   onChange,
   onDelete,
 }: QuestionEditorProps) {
+  const [imageInput, setImageInput] = useState(question.imageUrl ?? "");
+  const [imageError, setImageError] = useState(false);
+
   const updateChoice = (choiceIndex: number, text: string) => {
     const newChoices = [...question.choices];
     newChoices[choiceIndex] = { ...newChoices[choiceIndex], text };
@@ -24,6 +37,25 @@ export function QuestionEditor({
 
   const setCorrectAnswer = (choiceId: string) => {
     onChange({ ...question, correctChoiceIds: [choiceId] });
+  };
+
+  const handleImageUrlCommit = () => {
+    const trimmed = imageInput.trim();
+    if (trimmed === "") {
+      onChange({ ...question, imageUrl: undefined });
+      setImageError(false);
+    } else if (isValidImageUrl(trimmed)) {
+      onChange({ ...question, imageUrl: trimmed });
+      setImageError(false);
+    } else {
+      setImageError(true);
+    }
+  };
+
+  const handleRemoveImage = () => {
+    setImageInput("");
+    setImageError(false);
+    onChange({ ...question, imageUrl: undefined });
   };
 
   const colors = [
@@ -63,6 +95,49 @@ export function QuestionEditor({
             placeholder="Enter your question..."
             className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-[var(--text-primary)] placeholder:text-[var(--text-secondary)]/50 focus:outline-none focus:ring-2 focus:ring-[var(--color-action)]/50 focus:border-[var(--color-action)] transition-all"
           />
+
+          {/* Image URL */}
+          <div className="space-y-2">
+            <div className="flex items-center gap-2">
+              <Image className="w-4 h-4 text-[var(--text-secondary)] shrink-0" />
+              <input
+                type="url"
+                value={imageInput}
+                onChange={(e) => {
+                  setImageInput(e.target.value);
+                  setImageError(false);
+                }}
+                onBlur={handleImageUrlCommit}
+                placeholder="Image URL (optional)"
+                className={`flex-1 bg-white/5 border rounded-lg px-3 py-2 text-sm text-[var(--text-primary)] placeholder:text-[var(--text-secondary)]/50 focus:outline-none focus:ring-2 focus:ring-[var(--color-action)]/50 transition-all ${
+                  imageError ? "border-rose-500" : "border-white/10 focus:border-[var(--color-action)]"
+                }`}
+              />
+              {question.imageUrl && (
+                <button
+                  type="button"
+                  onClick={handleRemoveImage}
+                  className="p-1.5 rounded-lg hover:bg-rose-500/20 transition-colors text-rose-400 shrink-0"
+                  aria-label="Remove image"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              )}
+            </div>
+            {imageError && (
+              <p className="text-xs text-rose-400 pl-6">Please enter a valid http or https URL.</p>
+            )}
+            {question.imageUrl && !imageError && (
+              <div className="pl-6">
+                <img
+                  src={question.imageUrl}
+                  alt="Question preview"
+                  className="max-h-40 rounded-lg object-contain border border-white/10"
+                  onError={() => setImageError(true)}
+                />
+              </div>
+            )}
+          </div>
 
           {/* Choices - click the button to mark as correct */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">

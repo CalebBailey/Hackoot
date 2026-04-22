@@ -38,17 +38,17 @@ export function HomePage() {
   };
 
   return (
-    <div className="container mx-auto px-4 py-8 max-w-5xl">
+    <div className="container mx-auto px-4 py-6 max-w-5xl">
       {/* Header */}
-      <div className="text-center mb-10">
-        <img src="/logo.png" alt="Hackoot Logo" className="mx-auto mb-4 auto h-56" />
+      <div className="text-center mb-6">
+        <img src="/logo.png" alt="Hackoot Logo" className="mx-auto mb-3 w-auto h-28 sm:h-36 md:h-44" />
         <p className="text-[var(--text-secondary)]">
           Create and host interactive quizzes
         </p>
       </div>
 
       {/* Actions */}
-      <div className="flex flex-wrap items-center justify-center gap-3 mb-8">
+      <div className="flex flex-wrap items-center justify-center gap-3 mb-6">
         <Button
           variant="primary"
           size="lg"
@@ -84,15 +84,15 @@ export function HomePage() {
 
       {/* Quiz Grid */}
       {quizzes.length === 0 ? (
-        <div className="glass-card p-12 text-center">
+        <div className="glass-card p-6 text-center max-w-xl mx-auto">
           <div className="max-w-md mx-auto">
-            <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-white/10 flex items-center justify-center">
-              <Plus className="w-8 h-8 text-[var(--text-secondary)]" />
+            <div className="w-12 h-12 mx-auto mb-3 rounded-full bg-white/10 flex items-center justify-center">
+              <Plus className="w-6 h-6 text-[var(--text-secondary)]" />
             </div>
-            <h2 className="text-xl font-heading font-semibold text-[var(--text-primary)] mb-2">
+            <h2 className="text-lg font-heading font-semibold text-[var(--text-primary)] mb-2">
               No quizzes yet
             </h2>
-            <p className="text-[var(--text-secondary)] mb-6">
+            <p className="text-sm text-[var(--text-secondary)] mb-4">
               Create your first quiz or import an existing one to get started.
             </p>
             <Button variant="primary" onClick={() => navigate("/quiz/new")}>

@@ -142,7 +142,7 @@ export function HostLobbyPage({ quizId }: HostLobbyPageProps) {
   const joinUrl = `${window.location.origin}${window.location.pathname}#/join/${session.roomCode}`;
 
   return (
-    <div className="container mx-auto px-4 py-8 max-w-2xl">
+    <div className="container mx-auto px-4 py-8 max-w-5xl">
       {/* Header */}
       <div className="flex items-center gap-4 mb-8">
         <button
@@ -162,64 +162,76 @@ export function HostLobbyPage({ quizId }: HostLobbyPageProps) {
         </div>
       </div>
 
-      {/* Room Code & QR */}
-      <div className="glass-card p-6 sm:p-8 mb-6 text-center">
-        <p className="text-[var(--text-secondary)] mb-2">Join at</p>
-        <p className="text-lg font-medium text-[var(--text-primary)] mb-4">
-          {window.location.host}
-        </p>
-        <div className="flex justify-center mb-6">
-          <RoomCodeDisplay code={session.roomCode} />
-        </div>
-        <div className="flex justify-center">
-          <QrCode value={joinUrl} size={180} />
-        </div>
-      </div>
+      {/* Two-column layout */}
+      <div className="flex flex-col sm:flex-row gap-6 items-stretch">
 
-      {/* Participants */}
-      <div className="glass-card p-6 mb-6">
-        <div className="flex items-center gap-2 mb-4">
-          <Users className="w-5 h-5 text-[var(--text-secondary)]" />
-          <h2 className="text-lg font-heading font-semibold text-[var(--text-primary)]">
-            Players ({session.participants.length})
-          </h2>
-        </div>
-
-        {session.participants.length === 0 ? (
-          <p className="text-[var(--text-secondary)] text-center py-4">
-            Waiting for players to join...
+        {/* Left: Room Code & QR (1/3) */}
+        <div className="glass-card p-6 sm:p-8 text-center flex flex-col justify-center sm:w-1/2">
+          <p className="text-[var(--text-secondary)] mb-2">Join at</p>
+          <p className="text-lg font-medium text-[var(--text-primary)] mb-4">
+            {window.location.host}
           </p>
-        ) : (
-          <div className="flex flex-wrap gap-2">
-            {session.participants.map((participant) => (
-              <span
-                key={participant.participantId}
-                className="px-3 py-1.5 rounded-full bg-white/10 text-[var(--text-primary)] text-sm font-medium fade-in"
-              >
-                {participant.name}
-              </span>
-            ))}
+          <div className="flex justify-center mb-6">
+            <RoomCodeDisplay code={session.roomCode} />
           </div>
-        )}
+          <div className="flex justify-center">
+            <QrCode value={joinUrl} size={180} />
+          </div>
+        </div>
+
+        {/* Right: Players + Start button (2/3) */}
+        <div className="flex-1 flex flex-col gap-4">
+
+          {/* Participants */}
+          <div className="glass-card p-6 flex-1 flex flex-col">
+            <div className="flex items-center gap-2 mb-4">
+              <Users className="w-5 h-5 text-[var(--text-secondary)]" />
+              <h2 className="text-lg font-heading font-semibold text-[var(--text-primary)]">
+                Players ({session.participants.length})
+              </h2>
+            </div>
+
+            <div className="flex-1 overflow-y-auto">
+              {session.participants.length === 0 ? (
+                <p className="text-[var(--text-secondary)] text-center py-4">
+                  Waiting for players to join...
+                </p>
+              ) : (
+                <div className="flex flex-wrap gap-2">
+                  {session.participants.map((participant) => (
+                    <span
+                      key={participant.participantId}
+                      className="px-3 py-1.5 rounded-full bg-white/10 text-[var(--text-primary)] text-sm font-medium fade-in"
+                    >
+                      {participant.name}
+                    </span>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Start Button */}
+          <div>
+            <Button
+              variant="primary"
+              size="lg"
+              fullWidth
+              onClick={handleStartQuiz}
+              disabled={session.participants.length === 0}
+            >
+              <Play className="w-5 h-5 mr-2" />
+              Start Quiz
+            </Button>
+            {session.participants.length === 0 && (
+              <p className="text-center text-sm text-[var(--text-secondary)] mt-2">
+                At least 1 player required to start
+              </p>
+            )}
+          </div>
+
+        </div>
       </div>
-
-      {/* Start Button */}
-      <Button
-        variant="primary"
-        size="lg"
-        fullWidth
-        onClick={handleStartQuiz}
-        disabled={session.participants.length === 0}
-      >
-        <Play className="w-5 h-5 mr-2" />
-        Start Quiz
-      </Button>
-
-      {session.participants.length === 0 && (
-        <p className="text-center text-sm text-[var(--text-secondary)] mt-2">
-          At least 1 player required to start
-        </p>
-      )}
     </div>
   );
 }

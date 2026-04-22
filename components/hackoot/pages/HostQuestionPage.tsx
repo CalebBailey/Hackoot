@@ -131,6 +131,15 @@ export function HostQuestionPage({ quizId }: HostQuestionPageProps) {
         <h2 className="text-xl sm:text-2xl font-heading font-bold text-[var(--text-primary)] text-balance">
           {currentQuestion.text}
         </h2>
+        {currentQuestion.imageUrl && (
+          <div className="mt-4 flex justify-center">
+            <img
+              src={currentQuestion.imageUrl}
+              alt="Question illustration"
+              className="max-h-64 rounded-lg object-contain"
+            />
+          </div>
+        )}
         <p className="text-sm text-[var(--text-secondary)] mt-2">
           Up to 1000 points
         </p>

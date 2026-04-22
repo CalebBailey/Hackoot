@@ -12,6 +12,7 @@ export interface Question {
   id: string;
   type: "mcq";
   text: string;
+  imageUrl?: string;
   choices: Choice[];
   correctChoiceIds: string[];
 }
