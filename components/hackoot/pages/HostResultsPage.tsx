@@ -91,15 +91,6 @@ export function HostResultsPage({ quizId }: HostResultsPageProps) {
         <h2 className="text-xl sm:text-2xl font-heading font-bold text-[var(--text-primary)]">
           {currentQuestion.text}
         </h2>
-        {currentQuestion.imageUrl && (
-          <div className="mt-4 flex justify-center">
-            <img
-              src={currentQuestion.imageUrl}
-              alt="Question illustration"
-              className="max-h-48 rounded-lg object-contain"
-            />
-          </div>
-        )}
       </div>
 
       {/* Answer Grid with reveal */}

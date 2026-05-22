@@ -103,12 +103,17 @@ export function HostQuestionPage({ quizId }: HostQuestionPageProps) {
   const totalCount = session.participants.length;
 
   return (
-    <div className="container mx-auto px-4 py-8 max-w-3xl">
+    <div className="container mx-auto px-4 py-4 max-w-3xl">
       {/* Header */}
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex items-center justify-between mb-4">
         <div className="text-sm text-[var(--text-secondary)]">
           Question {currentQuestionIndex + 1} of {quiz.questions.length}
         </div>
+        <Timer
+          totalSeconds={QUESTION_TIME_LIMIT}
+          onExpire={handleTimerExpire}
+          running={timerRunning}
+        />
         <div className="flex items-center gap-2 text-[var(--text-secondary)]">
           <Users className="w-4 h-4" />
           <span>
@@ -117,36 +122,24 @@ export function HostQuestionPage({ quizId }: HostQuestionPageProps) {
         </div>
       </div>
 
-      {/* Timer - fixed 20 seconds for all questions */}
-      <div className="flex justify-center mb-8">
-        <Timer
-          totalSeconds={QUESTION_TIME_LIMIT}
-          onExpire={handleTimerExpire}
-          running={timerRunning}
-        />
-      </div>
-
       {/* Question */}
-      <div className="glass-card p-6 sm:p-8 mb-6 text-center">
-        <h2 className="text-xl sm:text-2xl font-heading font-bold text-[var(--text-primary)] text-balance">
-          {currentQuestion.text}
-        </h2>
+      <div className="glass-card p-4 sm:p-6 mb-4 text-center">
         {currentQuestion.imageUrl && (
-          <div className="mt-4 flex justify-center">
+          <div className="mb-3 flex justify-center">
             <img
               src={currentQuestion.imageUrl}
               alt="Question illustration"
-              className="max-h-64 rounded-lg object-contain"
+              className="max-h-[20vh] w-auto rounded-lg object-contain"
             />
           </div>
         )}
-        <p className="text-sm text-[var(--text-secondary)] mt-2">
-          Up to 1000 points
-        </p>
+        <h2 className="text-xl sm:text-2xl font-heading font-bold text-[var(--text-primary)] text-balance">
+          {currentQuestion.text}
+        </h2>
       </div>
 
       {/* Answer Grid (visible to host with all answers) */}
-      <div className="flex justify-center mb-8">
+      <div className="flex justify-center mb-4">
         <AnswerGrid
           choices={currentQuestion.choices}
           locked={true}
@@ -154,7 +147,7 @@ export function HostQuestionPage({ quizId }: HostQuestionPageProps) {
       </div>
 
       {/* Progress Bar */}
-      <div className="glass-card p-4 mb-6">
+      <div className="glass-card p-4 mb-4">
         <div className="flex justify-between text-sm text-[var(--text-secondary)] mb-2">
           <span>Responses</span>
           <span>
