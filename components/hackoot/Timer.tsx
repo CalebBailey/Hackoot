@@ -11,24 +11,25 @@ interface TimerProps {
 export function Timer({ totalSeconds, onExpire, running }: TimerProps) {
   const [timeRemaining, setTimeRemaining] = useState(totalSeconds);
   const onExpireRef = useRef(onExpire);
+  const hasExpiredRef = useRef(false);
 
-  // Keep the ref updated
   useEffect(() => {
     onExpireRef.current = onExpire;
   }, [onExpire]);
 
   useEffect(() => {
     setTimeRemaining(totalSeconds);
+    hasExpiredRef.current = false;
   }, [totalSeconds]);
 
   useEffect(() => {
     if (!running) return;
+    hasExpiredRef.current = false;
 
     const interval = setInterval(() => {
       setTimeRemaining((prev) => {
         if (prev <= 1) {
           clearInterval(interval);
-          onExpireRef.current();
           return 0;
         }
         return prev - 1;
@@ -37,6 +38,14 @@ export function Timer({ totalSeconds, onExpire, running }: TimerProps) {
 
     return () => clearInterval(interval);
   }, [running]);
+
+  // Call onExpire outside the state updater to avoid updating parent during render
+  useEffect(() => {
+    if (timeRemaining === 0 && !hasExpiredRef.current) {
+      hasExpiredRef.current = true;
+      onExpireRef.current();
+    }
+  }, [timeRemaining]);
 
   const percentage = (timeRemaining / totalSeconds) * 100;
   
@@ -50,8 +59,8 @@ export function Timer({ totalSeconds, onExpire, running }: TimerProps) {
   const strokeDashoffset = circumference - (percentage / 100) * circumference;
 
   return (
-    <div className="relative w-24 h-24">
-      <svg className="w-24 h-24 transform -rotate-90" viewBox="0 0 100 100">
+    <div className="relative w-14 h-14">
+      <svg className="w-14 h-14 transform -rotate-90" viewBox="0 0 100 100">
         {/* Background circle */}
         <circle
           cx="50"
@@ -77,7 +86,7 @@ export function Timer({ totalSeconds, onExpire, running }: TimerProps) {
       </svg>
       <div className="absolute inset-0 flex items-center justify-center">
         <span
-          className="text-3xl font-bold font-heading"
+          className="text-xl font-bold font-heading"
           style={{ color: getColor() }}
         >
           {timeRemaining}
