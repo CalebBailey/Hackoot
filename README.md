@@ -1,6 +1,6 @@
 # Hackoot
 
-An interactive, real-time quiz platform supporting up to 50 simultaneous players. Hosts create and manage quizzes, share a room code (or QR code), and run live sessions - all directly in the browser with no backend required.
+An interactive, real-time quiz platform supporting up to 50 simultaneous players. Hosts create and manage quizzes, share a room code (or QR code), and run live sessions directly in the browser.
 
 ## Features
 
@@ -9,7 +9,7 @@ An interactive, real-time quiz platform supporting up to 50 simultaneous players
 - **Up to 50 Players** - Supports up to 50 concurrent participants per session
 - **Time-Based Scoring** - 20-second timer per question; faster correct answers earn more points (up to 1,000 per question)
 - **Live Leaderboard** - Rankings are shown after every question and at the end of the session
-- **Peer-to-Peer** - Uses WebRTC via PeerJS for real-time communication with no dedicated server
+- **Cross-Network Multiplayer** - Uses Pusher Channels over WebSockets for reliable real-time communication across mobile and home networks
 
 ## Tech Stack
 
@@ -20,13 +20,31 @@ An interactive, real-time quiz platform supporting up to 50 simultaneous players
 | [Tailwind CSS v4](https://tailwindcss.com/) | Styling |
 | [Radix UI](https://www.radix-ui.com/) | Accessible UI primitives |
 | [Zustand](https://zustand-demo.pmnd.rs/) | Client state management |
-| [PeerJS](https://peerjs.com/) | WebRTC peer-to-peer transport |
+| [Pusher Channels](https://pusher.com/channels) | Real-time messaging transport |
 | [qrcode.react](https://github.com/zpao/qrcode.react) | QR code generation |
 
 ## Prerequisites
 
 - [Node.js](https://nodejs.org/) 18+
-- A modern browser with WebRTC support (Chrome, Firefox, or Safari)
+- A [Pusher Channels](https://pusher.com/channels) app (free tier is sufficient for development)
+
+## Environment Variables
+
+Create a local `.env.local` file (you can copy from `.env.local.example`) and set the following values:
+
+```bash
+# Server-side
+PUSHER_APP_ID=your_app_id
+PUSHER_KEY=your_key
+PUSHER_SECRET=your_secret
+PUSHER_CLUSTER=eu
+
+# Client-side
+NEXT_PUBLIC_PUSHER_KEY=your_key
+NEXT_PUBLIC_PUSHER_CLUSTER=eu
+```
+
+For Vercel deployments, add the same variables in your project environment settings.
 
 ## Getting Started
 
@@ -58,11 +76,17 @@ Open [http://localhost:3000](http://localhost:3000) in your browser.
 
 ## Browser Requirements
 
-WebRTC must be available. The following browsers are fully supported:
+The following modern browsers are fully supported:
 
 - Google Chrome (recommended)
 - Mozilla Firefox
 - Apple Safari
+
+## Deployment Notes
+
+- The app is designed to deploy cleanly on Vercel.
+- Real-time messaging is provided by Pusher Channels via serverless API routes.
+- No dedicated long-running websocket server is required in your own infrastructure.
 
 ## Licence
 
