@@ -82,6 +82,13 @@ The following modern browsers are fully supported:
 - Mozilla Firefox
 - Apple Safari
 
+## Scale and Limits
+
+- **Players per room** - The app is designed for up to 50 players per room (plus 1 host).
+- **Questions per session** - There is no strict app-level question limit, but longer sessions increase message usage and can reduce player engagement.
+- **Concurrent sessions** - Total capacity depends on your Pusher Channels and Vercel plan limits (concurrent connections, message volume, and serverless request quotas).
+- **Development vs production** - Free tiers are suitable for development and small tests; production usage should use a paid plan sized to your expected concurrent rooms.
+
 ## Deployment Notes
 
 - The app is designed to deploy cleanly on Vercel.
