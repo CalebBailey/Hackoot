@@ -15,6 +15,7 @@ export interface Question {
   imageUrl?: string;
   choices: Choice[];
   correctChoiceIds: string[];
+  doublePoints?: boolean;
 }
 
 export interface Choice {
@@ -61,7 +62,7 @@ export type PeerMessage =
   | { type: "submitAnswer"; participantId: string; questionId: string; choiceId: string; submittedAt: number }
   | { type: "joinAck"; participantId: string }
   | { type: "lobbyUpdate"; participants: { id: string; name: string }[] }
-  | { type: "questionStarted"; question: Omit<Question, "correctChoiceIds">; questionIndex: number; totalQuestions: number; startedAt: number }
+  | { type: "questionStarted"; question: Omit<Question, "correctChoiceIds">; questionIndex: number; totalQuestions: number; startedAt: number; doublePoints?: boolean }
   | { type: "answerRevealed"; correctChoiceIds: string[]; leaderboard: LeaderboardEntry[]; playerPoints: Record<string, number> }
   | { type: "sessionEnded"; finalLeaderboard: LeaderboardEntry[] }
   | { type: "error"; message: string };

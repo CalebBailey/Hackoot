@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { Question } from "@/types";
-import { GripVertical, Trash2, Check, Image, X } from "lucide-react";
+import { GripVertical, Trash2, Check, Image, X, Zap } from "lucide-react";
 
 function isValidImageUrl(url: string): boolean {
   try {
@@ -181,9 +181,24 @@ export function QuestionEditor({
           </div>
 
           {/* Info about scoring */}
-          <p className="text-xs text-[var(--text-secondary)]/60 pt-1">
-            20 seconds per question - Up to 1000 points based on speed
-          </p>
+          <div className="flex items-center justify-between pt-1">
+            <p className="text-xs text-[var(--text-secondary)]/60">
+              20 seconds per question - Up to {question.doublePoints ? "2000" : "1000"} points based on speed
+            </p>
+            <button
+              type="button"
+              onClick={() => onChange({ ...question, doublePoints: !question.doublePoints })}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold border transition-all ${
+                question.doublePoints
+                  ? "bg-amber-500/20 border-amber-400/60 text-amber-300 ring-1 ring-amber-400/40"
+                  : "bg-white/5 border-white/10 text-[var(--text-secondary)] hover:border-amber-400/40 hover:text-amber-300"
+              }`}
+              aria-pressed={question.doublePoints ?? false}
+            >
+              <Zap className="w-3.5 h-3.5" />
+              Double Points
+            </button>
+          </div>
         </div>
       </div>
     </div>

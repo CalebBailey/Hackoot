@@ -88,6 +88,7 @@ export class HostPeer {
       questionIndex,
       totalQuestions,
       startedAt: Date.now(),
+      doublePoints: question.doublePoints ?? false,
     });
   }
 

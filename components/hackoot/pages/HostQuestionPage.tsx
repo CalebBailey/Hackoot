@@ -7,7 +7,7 @@ import { Button } from "../Button";
 import { Timer } from "../Timer";
 import { AnswerGrid } from "../AnswerGrid";
 import { navigate } from "../HackootApp";
-import { Users, Eye } from "lucide-react";
+import { Users, Eye, Zap } from "lucide-react";
 import { HostPeer } from "@/transport/peer";
 import { calculateKahootPoints, getResponseTime, QUESTION_TIME_LIMIT } from "@/utils/scoring";
 
@@ -63,7 +63,7 @@ export function HostQuestionPage({ quizId }: HostQuestionPageProps) {
 
       const responseTime = getResponseTime(questionStartTimeRef.current, submittedAt);
       const correct = question.correctChoiceIds.includes(choiceId);
-      const points = calculateKahootPoints(correct, responseTime, QUESTION_TIME_LIMIT);
+      const points = calculateKahootPoints(correct, responseTime, QUESTION_TIME_LIMIT, question.doublePoints ?? false);
 
       recordAnswer(participantId, questionId, choiceId, submittedAt, correct, points);
     };
@@ -102,8 +102,11 @@ export function HostQuestionPage({ quizId }: HostQuestionPageProps) {
   const answeredCount = session.participants.filter((p) => p.answeredCurrentQuestion).length;
   const totalCount = session.participants.length;
 
+  const isDoublePoints = currentQuestion.doublePoints ?? false;
+
   return (
     <div className="container mx-auto px-4 py-4 max-w-3xl">
+      {isDoublePoints && <div className="double-points-vignette" aria-hidden="true" />}
       {/* Header */}
       <div className="flex items-center justify-between mb-4">
         <div className="text-sm text-[var(--text-secondary)]">
@@ -121,6 +124,16 @@ export function HostQuestionPage({ quizId }: HostQuestionPageProps) {
           </span>
         </div>
       </div>
+
+      {isDoublePoints && (
+        <div className="flex justify-center mb-3">
+          <div className="double-points-badge flex items-center gap-1.5 px-4 py-2 rounded-full bg-amber-500/20 border border-amber-400/60 text-amber-300 font-semibold text-sm shadow-lg shadow-amber-500/20">
+            <Zap className="w-4 h-4 fill-amber-400 text-amber-400" />
+            Double Points
+            <Zap className="w-4 h-4 fill-amber-400 text-amber-400" />
+          </div>
+        </div>
+      )}
 
       {/* Question */}
       <div className="glass-card p-4 sm:p-6 mb-4 text-center">

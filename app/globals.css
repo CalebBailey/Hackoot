@@ -158,6 +158,32 @@ html, body {
   background-color: #3B82F6;
 }
 
+/* Double points gold vignette */
+@keyframes double-points-vignette {
+  0%, 100% { opacity: 0.55; }
+  50% { opacity: 1; }
+}
+
+@keyframes double-points-badge {
+  0% { transform: scale(0.7) translateY(-8px); opacity: 0; }
+  60% { transform: scale(1.08) translateY(0); opacity: 1; }
+  80% { transform: scale(0.97) translateY(0); opacity: 1; }
+  100% { transform: scale(1) translateY(0); opacity: 1; }
+}
+
+.double-points-vignette {
+  pointer-events: none;
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  background: radial-gradient(ellipse at center, transparent 40%, rgba(251, 191, 36, 0.35) 100%);
+  animation: double-points-vignette 1.2s ease-in-out infinite;
+}
+
+.double-points-badge {
+  animation: double-points-badge 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+
 /* Animations */
 @keyframes pulse-glow {
   0%, 100% {
