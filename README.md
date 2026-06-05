@@ -32,13 +32,38 @@ An interactive, real-time quiz platform supporting up to 50 simultaneous players
 
 ```bash
 # Install dependencies
-npm install
+pnpm install
 
 # Start the development server
-npm run dev
+pnpm dev
 ```
 
 Open [http://localhost:3000](http://localhost:3000) in your browser.
+
+## Testing
+
+```bash
+# Unit + integration
+pnpm test
+
+# Watch mode
+pnpm test:watch
+
+# Coverage report
+pnpm test:coverage
+
+# Integration only
+pnpm test:integration
+
+# Multiplayer session stress simulation (25 participants)
+pnpm test:multiplayer
+
+# Install Playwright browser (run once)
+pnpm exec playwright install chromium
+
+# End-to-end tests
+pnpm test:e2e
+```
 
 ## Usage
 
