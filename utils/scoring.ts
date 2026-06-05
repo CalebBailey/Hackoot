@@ -22,24 +22,26 @@ export const MAX_POINTS = 1000;
 export function calculateKahootPoints(
   correct: boolean,
   responseTimeSeconds: number,
-  timerDuration: number = QUESTION_TIME_LIMIT
+  timerDuration: number = QUESTION_TIME_LIMIT,
+  doublePoints: boolean = false
 ): number {
   if (!correct) return 0;
-  
+
+  const multiplier = doublePoints ? 2 : 1;
+
   // If answered extremely fast (under 0.5s), award max points
   if (responseTimeSeconds < 0.5) {
-    return MAX_POINTS;
+    return MAX_POINTS * multiplier;
   }
-  
+
   // Clamp response time to valid range
   const clampedTime = Math.max(0, Math.min(responseTimeSeconds, timerDuration));
-  
+
   // Kahoot formula: Points = Round((1 - ((responseTime / timerDuration) / 2)) * maxPoints)
   const timeFactor = (clampedTime / timerDuration) / 2;
   const points = Math.round((1 - timeFactor) * MAX_POINTS);
-  
-  // Ensure minimum of 0 points
-  return Math.max(0, points);
+
+  return Math.max(0, points) * multiplier;
 }
 
 /**

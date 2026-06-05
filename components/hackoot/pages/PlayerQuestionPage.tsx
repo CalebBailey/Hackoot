@@ -8,6 +8,7 @@ import { navigate } from "../HackootApp";
 import { PlayerPeer } from "@/transport/peer";
 import { PeerMessage } from "@/types";
 import { QUESTION_TIME_LIMIT } from "@/utils/scoring";
+import { Zap } from "lucide-react";
 
 export function PlayerQuestionPage() {
   const session = useSessionStore((state) => state.session);
@@ -69,13 +70,26 @@ export function PlayerQuestionPage() {
     return null;
   }
 
+  const isDoublePoints = currentQuestion.doublePoints ?? false;
+
   return (
     <div className="container mx-auto px-4 py-8 max-w-2xl min-h-screen flex flex-col">
+      {isDoublePoints && <div className="double-points-vignette" aria-hidden="true" />}
       {/* Question info */}
       <div className="text-center mb-4">
-        <p className="text-sm text-[var(--text-secondary)]">
-          Up to 1000 points
-        </p>
+        {isDoublePoints ? (
+          <div className="flex justify-center">
+            <div className="double-points-badge flex items-center gap-1.5 px-4 py-2 rounded-full bg-amber-500/20 border border-amber-400/60 text-amber-300 font-semibold text-sm shadow-lg shadow-amber-500/20">
+              <Zap className="w-4 h-4 fill-amber-400 text-amber-400" />
+              Double Points - Up to 2000
+              <Zap className="w-4 h-4 fill-amber-400 text-amber-400" />
+            </div>
+          </div>
+        ) : (
+          <p className="text-sm text-[var(--text-secondary)]">
+            Up to 1000 points
+          </p>
+        )}
       </div>
 
       {/* Timer - fixed 20 seconds */}
