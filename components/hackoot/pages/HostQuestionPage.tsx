@@ -105,29 +105,30 @@ export function HostQuestionPage({ quizId }: HostQuestionPageProps) {
   const isDoublePoints = currentQuestion.doublePoints ?? false;
 
   return (
-    <div className="container mx-auto px-4 py-4 max-w-3xl">
+    <div className="h-screen overflow-hidden flex flex-col px-4 py-3 max-w-3xl mx-auto">
       {isDoublePoints && <div className="double-points-vignette" aria-hidden="true" />}
-      {/* Header */}
-      <div className="flex items-center justify-between mb-4">
+
+      {/* Header - CSS grid keeps timer pixel-perfect centred */}
+      <div className="grid grid-cols-3 items-center mb-2">
         <div className="text-sm text-[var(--text-secondary)]">
           Question {currentQuestionIndex + 1} of {quiz.questions.length}
         </div>
-        <Timer
-          totalSeconds={QUESTION_TIME_LIMIT}
-          onExpire={handleTimerExpire}
-          running={timerRunning}
-        />
-        <div className="flex items-center gap-2 text-[var(--text-secondary)]">
+        <div className="flex justify-center">
+          <Timer
+            totalSeconds={QUESTION_TIME_LIMIT}
+            onExpire={handleTimerExpire}
+            running={timerRunning}
+          />
+        </div>
+        <div className="flex items-center justify-end gap-2 text-[var(--text-secondary)]">
           <Users className="w-4 h-4" />
-          <span>
-            {answeredCount}/{totalCount} answered
-          </span>
+          <span>{answeredCount}/{totalCount} answered</span>
         </div>
       </div>
 
       {isDoublePoints && (
-        <div className="flex justify-center mb-3">
-          <div className="double-points-badge flex items-center gap-1.5 px-4 py-2 rounded-full bg-amber-500/20 border border-amber-400/60 text-amber-300 font-semibold text-sm shadow-lg shadow-amber-500/20">
+        <div className="flex justify-center mb-2">
+          <div className="double-points-badge flex items-center gap-1.5 px-4 py-1.5 rounded-full bg-amber-500/20 border border-amber-400/60 text-amber-300 font-semibold text-sm shadow-lg shadow-amber-500/20">
             <Zap className="w-4 h-4 fill-amber-400 text-amber-400" />
             Double Points
             <Zap className="w-4 h-4 fill-amber-400 text-amber-400" />
@@ -136,13 +137,13 @@ export function HostQuestionPage({ quizId }: HostQuestionPageProps) {
       )}
 
       {/* Question */}
-      <div className="glass-card p-4 sm:p-6 mb-4 text-center">
+      <div className="glass-card p-4 mb-3 text-center">
         {currentQuestion.imageUrl && (
-          <div className="mb-3 flex justify-center">
+          <div className="mb-2 flex justify-center">
             <img
               src={currentQuestion.imageUrl}
               alt="Question illustration"
-              className="max-h-[20vh] w-auto rounded-lg object-contain"
+              className="max-h-[18vh] w-auto rounded-lg object-contain"
             />
           </div>
         )}
@@ -151,40 +152,27 @@ export function HostQuestionPage({ quizId }: HostQuestionPageProps) {
         </h2>
       </div>
 
-      {/* Answer Grid (visible to host with all answers) */}
-      <div className="flex justify-center mb-4">
-        <AnswerGrid
-          choices={currentQuestion.choices}
-          locked={true}
-        />
+      {/* Answer Grid */}
+      <div className="flex justify-center mb-3">
+        <AnswerGrid choices={currentQuestion.choices} locked={true} />
       </div>
 
       {/* Progress Bar */}
-      <div className="glass-card p-4 mb-4">
+      <div className="glass-card p-3 mb-3">
         <div className="flex justify-between text-sm text-[var(--text-secondary)] mb-2">
           <span>Responses</span>
-          <span>
-            {answeredCount} of {totalCount}
-          </span>
+          <span>{answeredCount} of {totalCount}</span>
         </div>
         <div className="h-2 bg-white/10 rounded-full overflow-hidden">
           <div
             className="h-full bg-[var(--color-action)] transition-all duration-300"
-            style={{
-              width: `${totalCount > 0 ? (answeredCount / totalCount) * 100 : 0}%`,
-            }}
+            style={{ width: `${totalCount > 0 ? (answeredCount / totalCount) * 100 : 0}%` }}
           />
         </div>
       </div>
 
       {/* Reveal Button */}
-      <Button
-        variant="primary"
-        size="lg"
-        fullWidth
-        onClick={handleReveal}
-        disabled={!canReveal}
-      >
+      <Button variant="primary" size="lg" fullWidth onClick={handleReveal} disabled={!canReveal}>
         <Eye className="w-5 h-5 mr-2" />
         {canReveal ? "Reveal Answers" : "Waiting for responses..."}
       </Button>
