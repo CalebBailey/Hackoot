@@ -65,4 +65,15 @@ export type PeerMessage =
   | { type: "questionStarted"; question: Omit<Question, "correctChoiceIds">; questionIndex: number; totalQuestions: number; startedAt: number; doublePoints?: boolean }
   | { type: "answerRevealed"; correctChoiceIds: string[]; leaderboard: LeaderboardEntry[]; playerPoints: Record<string, number> }
   | { type: "sessionEnded"; finalLeaderboard: LeaderboardEntry[] }
-  | { type: "error"; message: string };
+  | { type: "error"; message: string }
+  | {
+      type: "rejoinAck";
+      participantId: string;
+      sessionState: Session["state"];
+      score: number;
+      answeredCurrentQuestion?: boolean;
+      question?: Omit<Question, "correctChoiceIds">;
+      questionIndex?: number;
+      totalQuestions?: number;
+      leaderboard?: LeaderboardEntry[];
+    };

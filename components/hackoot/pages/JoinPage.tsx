@@ -1,12 +1,13 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useEffect } from "react";
 import { useSessionStore } from "@/store/sessionStore";
 import { Button } from "../Button";
 import { navigate } from "../HackootApp";
-import { ArrowLeft, Gamepad2, AlertCircle } from "lucide-react";
+import { ArrowLeft, Gamepad2, AlertCircle, RefreshCw } from "lucide-react";
 import { PlayerPeer, isWebRTCSupported } from "@/transport/peer";
 import { generateUUID } from "@/lib/utils";
+import { loadPlayerSession, savePlayerSession, clearPlayerSession, CachedPlayerSession } from "@/utils/playerSession";
 
 interface JoinPageProps {
   initialRoomCode?: string;
@@ -18,18 +19,25 @@ export function JoinPage({ initialRoomCode }: JoinPageProps) {
   const [joining, setJoining] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [webRTCSupported, setWebRTCSupported] = useState(true);
+  const [cachedSession, setCachedSession] = useState<CachedPlayerSession | null>(null);
 
   const setParticipant = useSessionStore((state) => state.setParticipant);
   const setIsHost = useSessionStore((state) => state.setIsHost);
   const initSession = useSessionStore((state) => state.initSession);
 
-  // Check WebRTC support on mount
-  useState(() => {
-    if (typeof window !== "undefined" && !isWebRTCSupported()) {
+  useEffect(() => {
+    if (!isWebRTCSupported()) {
       setWebRTCSupported(false);
       setError("Your browser does not support WebRTC. Please use Chrome, Firefox, Safari, or Edge.");
     }
-  });
+
+    const cached = loadPlayerSession();
+    if (cached) {
+      setCachedSession(cached);
+      setRoomCode(cached.roomCode);
+      setName(cached.name);
+    }
+  }, []);
 
   const handleJoin = async () => {
     if (!roomCode.trim() || roomCode.length !== 6) {
@@ -45,7 +53,12 @@ export function JoinPage({ initialRoomCode }: JoinPageProps) {
     setError(null);
     setJoining(true);
 
-    const participantId = generateUUID();
+    // Reuse the cached participantId when rejoining the same room so the host
+    // recognises the player and resumes their score rather than creating a duplicate
+    const upperRoomCode = roomCode.toUpperCase();
+    const participantId =
+      cachedSession?.roomCode === upperRoomCode ? cachedSession.participantId : generateUUID();
+
     const playerPeer = new PlayerPeer();
 
     playerPeer.onError = (err) => {
@@ -54,13 +67,15 @@ export function JoinPage({ initialRoomCode }: JoinPageProps) {
     };
 
     try {
-      await playerPeer.connect(roomCode.toUpperCase(), participantId, name.trim());
+      await playerPeer.connect(upperRoomCode, participantId, name.trim());
+
+      savePlayerSession({ participantId, name: name.trim(), roomCode: upperRoomCode });
 
       // Store player peer and info
       (window as any).__hackootPlayerPeer = playerPeer;
       setParticipant(participantId, name.trim());
       setIsHost(false);
-      initSession(generateUUID(), "", roomCode.toUpperCase());
+      initSession(generateUUID(), "", upperRoomCode);
 
       navigate("/play/lobby");
     } catch (err) {
@@ -90,6 +105,26 @@ export function JoinPage({ initialRoomCode }: JoinPageProps) {
             Join Game
           </h1>
         </div>
+
+        {/* Resume notice */}
+        {cachedSession && cachedSession.roomCode === roomCode && (
+          <div className="flex items-center gap-2 p-3 mb-4 bg-[var(--color-action)]/10 border border-[var(--color-action)]/30 rounded-lg">
+            <RefreshCw className="w-4 h-4 text-[var(--color-action)] flex-shrink-0" />
+            <p className="text-sm text-[var(--text-secondary)]">
+              Resuming previous session as <span className="font-medium text-[var(--text-primary)]">{cachedSession.name}</span>
+            </p>
+            <button
+              onClick={() => {
+                clearPlayerSession();
+                setCachedSession(null);
+                setName("");
+              }}
+              className="ml-auto text-xs text-[var(--text-secondary)] hover:text-[var(--text-primary)] underline"
+            >
+              New player
+            </button>
+          </div>
+        )}
 
         {/* Error */}
         {error && (

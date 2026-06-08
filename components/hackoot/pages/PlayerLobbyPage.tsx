@@ -9,9 +9,12 @@ import { PeerMessage } from "@/types";
 
 export function PlayerLobbyPage() {
   const participantName = useSessionStore((state) => state.participantName);
+  const participantId = useSessionStore((state) => state.participantId);
   const session = useSessionStore((state) => state.session);
   const startQuestion = useSessionStore((state) => state.startQuestion);
   const setCurrentQuestion = useSessionStore((state) => state.setCurrentQuestion);
+  const updateLeaderboard = useSessionStore((state) => state.updateLeaderboard);
+  const setHasAnsweredCurrentQuestion = useSessionStore((state) => state.setHasAnsweredCurrentQuestion);
 
   const [participants, setParticipants] = useState<{ id: string; name: string }[]>([]);
 
@@ -27,16 +30,33 @@ export function PlayerLobbyPage() {
       if (message.type === "lobbyUpdate") {
         setParticipants(message.participants);
       } else if (message.type === "questionStarted") {
-        // Store the question (without correct answers)
         setCurrentQuestion({
           ...message.question,
-          correctChoiceIds: [], // Will be revealed later
+          correctChoiceIds: [],
         });
         startQuestion(message.questionIndex, {
           ...message.question,
           correctChoiceIds: [],
         });
         navigate("/play/question");
+      } else if (message.type === "rejoinAck" && message.participantId === participantId) {
+        // Restore the player to the correct point in the session
+        if (message.sessionState === "question" && message.question !== undefined) {
+          setHasAnsweredCurrentQuestion(message.answeredCurrentQuestion ?? false);
+          setCurrentQuestion({ ...message.question, correctChoiceIds: [] });
+          startQuestion(message.questionIndex!, { ...message.question, correctChoiceIds: [] });
+          navigate("/play/question");
+        } else if (
+          message.sessionState === "reveal" ||
+          message.sessionState === "leaderboard"
+        ) {
+          if (message.leaderboard) updateLeaderboard(message.leaderboard, message.score);
+          navigate("/play/result");
+        } else if (message.sessionState === "ended") {
+          if (message.leaderboard) updateLeaderboard(message.leaderboard, 0);
+          navigate("/play/final");
+        }
+        // sessionState === "lobby": already on this page, no action needed
       }
     };
 

@@ -15,10 +15,12 @@ export function PlayerQuestionPage() {
   const currentQuestion = useSessionStore((state) => state.currentQuestion);
   const participantId = useSessionStore((state) => state.participantId);
   const updateLeaderboard = useSessionStore((state) => state.updateLeaderboard);
+  const hasAnsweredCurrentQuestion = useSessionStore((state) => state.hasAnsweredCurrentQuestion);
+  const setHasAnsweredCurrentQuestion = useSessionStore((state) => state.setHasAnsweredCurrentQuestion);
 
   const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [locked, setLocked] = useState(false);
-  const [timerRunning, setTimerRunning] = useState(true);
+  const [locked, setLocked] = useState(hasAnsweredCurrentQuestion);
+  const [timerRunning, setTimerRunning] = useState(!hasAnsweredCurrentQuestion);
 
   const playerPeer = (window as any).__hackootPlayerPeer as PlayerPeer | undefined;
 
@@ -28,10 +30,12 @@ export function PlayerQuestionPage() {
       return;
     }
 
-    // Reset state for new question
-    setSelectedId(null);
-    setLocked(false);
-    setTimerRunning(true);
+    // If this is a normal new question (not a rejoin), reset the answered state
+    if (!hasAnsweredCurrentQuestion) {
+      setSelectedId(null);
+      setLocked(false);
+      setTimerRunning(true);
+    }
 
     playerPeer.onMessage = (message: PeerMessage) => {
       if (message.type === "answerRevealed") {
@@ -43,7 +47,7 @@ export function PlayerQuestionPage() {
         navigate("/play/final");
       }
     };
-  }, [playerPeer, currentQuestion, participantId, updateLeaderboard]);
+  }, [playerPeer, currentQuestion, participantId, updateLeaderboard, hasAnsweredCurrentQuestion]);
 
   const handleSelect = (choiceId: string) => {
     if (locked || !playerPeer || !currentQuestion) return;
@@ -51,6 +55,7 @@ export function PlayerQuestionPage() {
     setSelectedId(choiceId);
     setLocked(true);
     setTimerRunning(false);
+    setHasAnsweredCurrentQuestion(true);
 
     playerPeer.send({
       type: "submitAnswer",
