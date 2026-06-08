@@ -6,6 +6,7 @@ import { Button } from "../Button";
 import { navigate } from "../HackootApp";
 import { Trophy, Download, Home, Medal } from "lucide-react";
 import { exportSessionResults } from "@/utils/quizStorage";
+import { clearPlayerSession } from "@/utils/playerSession";
 
 // Delays (ms) for each place to begin animating - 3rd first, 2nd second, 1st last
 const PODIUM_DELAYS = { third: 0, second: 700, first: 1400 };
@@ -61,6 +62,7 @@ export function FinalLeaderboardPage() {
     playerPeer?.disconnect();
     (window as any).__hackootHostPeer = null;
     (window as any).__hackootPlayerPeer = null;
+    clearPlayerSession();
     reset();
     navigate("/");
   };

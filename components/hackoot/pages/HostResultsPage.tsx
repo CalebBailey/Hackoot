@@ -21,6 +21,7 @@ export function HostResultsPage({ quizId }: HostResultsPageProps) {
   const session = useSessionStore((state) => state.session);
   const getLeaderboard = useSessionStore((state) => state.getLeaderboard);
   const startQuestion = useSessionStore((state) => state.startQuestion);
+  const revealAnswer = useSessionStore((state) => state.revealAnswer);
 
   const [revealed, setRevealed] = useState(false);
 
@@ -51,8 +52,9 @@ export function HostResultsPage({ quizId }: HostResultsPageProps) {
       playerPoints,
     });
 
+    revealAnswer();
     setRevealed(true);
-  }, [quiz, session, currentQuestion, hostPeer, getLeaderboard, revealed]);
+  }, [quiz, session, currentQuestion, hostPeer, getLeaderboard, revealed, revealAnswer]);
 
   const handleNext = () => {
     if (!quiz || !session || !hostPeer) return;

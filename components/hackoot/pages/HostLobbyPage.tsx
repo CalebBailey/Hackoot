@@ -11,6 +11,7 @@ import { ArrowLeft, Play, Users, AlertCircle } from "lucide-react";
 import { generateRoomCode } from "@/utils/roomCode";
 import { generateUUID } from "@/lib/utils";
 import { HostPeer, isWebRTCSupported } from "@/transport/peer";
+import { PeerMessage } from "@/types";
 
 interface HostLobbyPageProps {
   quizId: string;
@@ -53,23 +54,56 @@ export function HostLobbyPage({ quizId }: HostLobbyPageProps) {
     hostPeerRef.current = hostPeer;
 
     hostPeer.onPlayerJoin = (participantId, name) => {
-      addParticipant({
-        participantId,
-        name,
-        score: 0,
-        answeredCurrentQuestion: false,
-      });
+      const storeState = useSessionStore.getState();
+      const existingParticipant = storeState.session?.participants.find(
+        (p) => p.participantId === participantId
+      ) ?? null;
 
-      // Broadcast lobby update to all players
-      const currentSession = useSessionStore.getState().session;
-      if (currentSession) {
+      if (!existingParticipant) {
+        addParticipant({
+          participantId,
+          name,
+          score: 0,
+          answeredCurrentQuestion: false,
+        });
+      }
+
+      // Broadcast updated lobby to all players
+      const updatedSession = useSessionStore.getState().session;
+      if (updatedSession) {
         hostPeer.broadcast({
           type: "lobbyUpdate",
-          participants: currentSession.participants.map((p) => ({
+          participants: updatedSession.participants.map((p) => ({
             id: p.participantId,
             name: p.name,
           })),
         });
+      }
+
+      // If this is a mid-game rejoin, send the current state so the player
+      // can navigate to the right page without waiting for the next broadcast
+      if (existingParticipant && updatedSession && updatedSession.state !== "lobby") {
+        const qIdx = updatedSession.currentQuestionIndex;
+        const currentQuestion = qIdx !== null ? quiz?.questions[qIdx] : null;
+        const leaderboard = useSessionStore.getState().getLeaderboard();
+
+        const rejoinMsg: PeerMessage = {
+          type: "rejoinAck",
+          participantId,
+          sessionState: updatedSession.state,
+          score: existingParticipant.score,
+          leaderboard,
+          ...(updatedSession.state === "question" && currentQuestion
+            ? {
+                question: (({ correctChoiceIds, ...q }) => q)(currentQuestion),
+                questionIndex: qIdx!,
+                totalQuestions: quiz?.questions.length ?? 0,
+                answeredCurrentQuestion: existingParticipant.answeredCurrentQuestion,
+              }
+            : {}),
+        };
+
+        hostPeer.broadcast(rejoinMsg);
       }
     };
 

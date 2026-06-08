@@ -9,9 +9,11 @@ interface SessionStore {
   participantId: string | null;
   participantName: string | null;
   lastPointsAwarded: number;
+  hasAnsweredCurrentQuestion: boolean;
   
   // Actions
   initSession: (sessionId: string, quizId: string, roomCode: string) => void;
+  setHasAnsweredCurrentQuestion: (answered: boolean) => void;
   setIsHost: (isHost: boolean) => void;
   setParticipant: (participantId: string, name: string) => void;
   addParticipant: (participant: Participant) => void;
@@ -44,6 +46,7 @@ export const useSessionStore = create<SessionStore>((set, get) => ({
   participantId: null,
   participantName: null,
   lastPointsAwarded: 0,
+  hasAnsweredCurrentQuestion: false,
 
   initSession: (sessionId, quizId, roomCode) => {
     set({
@@ -105,6 +108,8 @@ export const useSessionStore = create<SessionStore>((set, get) => ({
     });
   },
 
+  setHasAnsweredCurrentQuestion: (answered) => set({ hasAnsweredCurrentQuestion: answered }),
+
   startQuestion: (questionIndex, question) => {
     set((state) => {
       if (!state.session) return state;
@@ -120,6 +125,7 @@ export const useSessionStore = create<SessionStore>((set, get) => ({
           })),
         },
         currentQuestion: question,
+        hasAnsweredCurrentQuestion: false,
       };
     });
   },
