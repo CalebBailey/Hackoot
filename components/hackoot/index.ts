@@ -7,3 +7,4 @@ export { RoomCodeDisplay } from './RoomCodeDisplay';
 export { QrCode } from './QrCode';
 export { QuizCard } from './QuizCard';
 export { QuestionEditor } from './QuestionEditor';
+export { GiphyPicker } from './GiphyPicker';

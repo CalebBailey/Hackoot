@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Question } from "@/types";
 import { GripVertical, Trash2, Check, Image, X, Zap } from "lucide-react";
+import { GiphyPicker } from "./GiphyPicker";
 
 function isValidImageUrl(url: string): boolean {
   try {
@@ -28,6 +29,7 @@ export function QuestionEditor({
 }: QuestionEditorProps) {
   const [imageInput, setImageInput] = useState(question.imageUrl ?? "");
   const [imageError, setImageError] = useState(false);
+  const [showGiphyPicker, setShowGiphyPicker] = useState(false);
 
   const updateChoice = (choiceIndex: number, text: string) => {
     const newChoices = [...question.choices];
@@ -55,7 +57,15 @@ export function QuestionEditor({
   const handleRemoveImage = () => {
     setImageInput("");
     setImageError(false);
+    setShowGiphyPicker(false);
     onChange({ ...question, imageUrl: undefined });
+  };
+
+  const handleGiphySelect = (url: string) => {
+    setImageInput(url);
+    setImageError(false);
+    setShowGiphyPicker(false);
+    onChange({ ...question, imageUrl: url });
   };
 
   const colors = [
@@ -96,7 +106,7 @@ export function QuestionEditor({
             className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-[var(--text-primary)] placeholder:text-[var(--text-secondary)]/50 focus:outline-none focus:ring-2 focus:ring-[var(--color-action)]/50 focus:border-[var(--color-action)] transition-all"
           />
 
-          {/* Image URL */}
+          {/* Image */}
           <div className="space-y-2">
             <div className="flex items-center gap-2">
               <Image className="w-4 h-4 text-[var(--text-secondary)] shrink-0" />
@@ -113,6 +123,19 @@ export function QuestionEditor({
                   imageError ? "border-rose-500" : "border-white/10 focus:border-[var(--color-action)]"
                 }`}
               />
+              <button
+                type="button"
+                onClick={() => setShowGiphyPicker((v) => !v)}
+                className={`px-2.5 py-1.5 rounded-lg text-xs font-semibold border transition-all shrink-0 ${
+                  showGiphyPicker
+                    ? "bg-[var(--color-action)]/20 border-[var(--color-action)]/60 text-[var(--color-action)]"
+                    : "bg-white/5 border-white/10 text-[var(--text-secondary)] hover:border-[var(--color-action)]/40 hover:text-[var(--color-action)]"
+                }`}
+                aria-pressed={showGiphyPicker}
+                aria-label="Search Giphy for a GIF"
+              >
+                GIF
+              </button>
               {question.imageUrl && (
                 <button
                   type="button"
@@ -124,6 +147,12 @@ export function QuestionEditor({
                 </button>
               )}
             </div>
+            {showGiphyPicker && (
+              <GiphyPicker
+                onSelect={handleGiphySelect}
+                onClose={() => setShowGiphyPicker(false)}
+              />
+            )}
             {imageError && (
               <p className="text-xs text-rose-400 pl-6">Please enter a valid http or https URL.</p>
             )}
