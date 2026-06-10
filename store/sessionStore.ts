@@ -1,5 +1,6 @@
 import { create } from "zustand";
 import { Session, Participant, AnswerRecord, LeaderboardEntry, Question } from "../types";
+import { DEFAULT_QUESTION_TIME_LIMIT, sanitizeQuestionTimeLimit } from "@/utils/scoring";
 
 interface SessionStore {
   session: Session | null;
@@ -10,6 +11,7 @@ interface SessionStore {
   participantName: string | null;
   lastPointsAwarded: number;
   hasAnsweredCurrentQuestion: boolean;
+  currentQuestionDuration: number;
   
   // Actions
   initSession: (sessionId: string, quizId: string, roomCode: string) => void;
@@ -19,7 +21,7 @@ interface SessionStore {
   addParticipant: (participant: Participant) => void;
   removeParticipant: (participantId: string) => void;
   markParticipantDisconnected: (participantId: string) => void;
-  startQuestion: (questionIndex: number, question: Question) => void;
+  startQuestion: (questionIndex: number, question: Question, questionDuration?: number) => void;
   setCurrentQuestion: (question: Question | null) => void;
   recordAnswer: (
     participantId: string,
@@ -47,6 +49,7 @@ export const useSessionStore = create<SessionStore>((set, get) => ({
   participantName: null,
   lastPointsAwarded: 0,
   hasAnsweredCurrentQuestion: false,
+  currentQuestionDuration: DEFAULT_QUESTION_TIME_LIMIT,
 
   initSession: (sessionId, quizId, roomCode) => {
     set({
@@ -110,7 +113,8 @@ export const useSessionStore = create<SessionStore>((set, get) => ({
 
   setHasAnsweredCurrentQuestion: (answered) => set({ hasAnsweredCurrentQuestion: answered }),
 
-  startQuestion: (questionIndex, question) => {
+  startQuestion: (questionIndex, question, questionDuration) => {
+    const resolvedDuration = sanitizeQuestionTimeLimit(questionDuration ?? question.timeLimit);
     set((state) => {
       if (!state.session) return state;
       return {
@@ -125,6 +129,7 @@ export const useSessionStore = create<SessionStore>((set, get) => ({
           })),
         },
         currentQuestion: question,
+        currentQuestionDuration: resolvedDuration,
         hasAnsweredCurrentQuestion: false,
       };
     });
@@ -233,6 +238,8 @@ export const useSessionStore = create<SessionStore>((set, get) => ({
       participantId: null,
       participantName: null,
       lastPointsAwarded: 0,
+      hasAnsweredCurrentQuestion: false,
+      currentQuestionDuration: DEFAULT_QUESTION_TIME_LIMIT,
     });
   },
 

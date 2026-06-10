@@ -7,7 +7,7 @@ import { AnswerGrid } from "../AnswerGrid";
 import { navigate } from "../HackootApp";
 import { PlayerPeer } from "@/transport/peer";
 import { PeerMessage } from "@/types";
-import { QUESTION_TIME_LIMIT } from "@/utils/scoring";
+import { DEFAULT_QUESTION_TIME_LIMIT } from "@/utils/scoring";
 import { Zap } from "lucide-react";
 
 export function PlayerQuestionPage() {
@@ -17,6 +17,7 @@ export function PlayerQuestionPage() {
   const updateLeaderboard = useSessionStore((state) => state.updateLeaderboard);
   const hasAnsweredCurrentQuestion = useSessionStore((state) => state.hasAnsweredCurrentQuestion);
   const setHasAnsweredCurrentQuestion = useSessionStore((state) => state.setHasAnsweredCurrentQuestion);
+  const currentQuestionDuration = useSessionStore((state) => state.currentQuestionDuration);
 
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [locked, setLocked] = useState(hasAnsweredCurrentQuestion);
@@ -97,7 +98,7 @@ export function PlayerQuestionPage() {
       {/* Timer */}
       <div className="flex justify-center mb-4">
         <Timer
-          totalSeconds={QUESTION_TIME_LIMIT}
+          totalSeconds={currentQuestionDuration || DEFAULT_QUESTION_TIME_LIMIT}
           onExpire={handleTimerExpire}
           running={timerRunning}
         />

@@ -55,7 +55,7 @@ export function PlayerResultPage() {
         startQuestion(message.questionIndex, {
           ...message.question,
           correctChoiceIds: [],
-        });
+        }, message.questionDuration);
         navigate("/play/question");
       } else if (message.type === "sessionEnded") {
         updateLeaderboard(message.finalLeaderboard, 0);

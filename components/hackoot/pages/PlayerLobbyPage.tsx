@@ -37,14 +37,14 @@ export function PlayerLobbyPage() {
         startQuestion(message.questionIndex, {
           ...message.question,
           correctChoiceIds: [],
-        });
+        }, message.questionDuration);
         navigate("/play/question");
       } else if (message.type === "rejoinAck" && message.participantId === participantId) {
         // Restore the player to the correct point in the session
         if (message.sessionState === "question" && message.question !== undefined) {
           setHasAnsweredCurrentQuestion(message.answeredCurrentQuestion ?? false);
           setCurrentQuestion({ ...message.question, correctChoiceIds: [] });
-          startQuestion(message.questionIndex!, { ...message.question, correctChoiceIds: [] });
+          startQuestion(message.questionIndex!, { ...message.question, correctChoiceIds: [] }, message.questionDuration);
           navigate("/play/question");
         } else if (
           message.sessionState === "reveal" ||

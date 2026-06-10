@@ -6,7 +6,7 @@
  * - Max points: 1000 for a correct answer
  * - Faster answers get more points
  * - If answered in less than 0.5 seconds, award max points
- * - Timer is fixed at 20 seconds per question
+ * - Timer defaults to 20 seconds per question
  * 
  * Example: 2 second response on 20 second timer
  * = Round((1 - ((2/20) / 2)) * 1000)
@@ -16,13 +16,22 @@
  * = 950 points
  */
 
-export const QUESTION_TIME_LIMIT = 20; // Fixed 20 seconds like Kahoot
+export const DEFAULT_QUESTION_TIME_LIMIT = 20;
+export const QUESTION_TIME_LIMIT = DEFAULT_QUESTION_TIME_LIMIT;
 export const MAX_POINTS = 1000;
+
+export function sanitizeQuestionTimeLimit(value: number | undefined): number {
+  if (typeof value !== "number" || Number.isNaN(value)) {
+    return DEFAULT_QUESTION_TIME_LIMIT;
+  }
+
+  return Math.max(1, Math.round(value));
+}
 
 export function calculateKahootPoints(
   correct: boolean,
   responseTimeSeconds: number,
-  timerDuration: number = QUESTION_TIME_LIMIT,
+  timerDuration: number = DEFAULT_QUESTION_TIME_LIMIT,
   doublePoints: boolean = false
 ): number {
   if (!correct) return 0;

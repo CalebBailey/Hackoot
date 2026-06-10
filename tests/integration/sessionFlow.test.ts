@@ -12,6 +12,7 @@ const question: Question = {
     { id: "b", text: "5" },
   ],
   correctChoiceIds: ["a"],
+  timeLimit: 30,
 };
 
 describe("session flow stress simulation", () => {
@@ -38,7 +39,7 @@ describe("session flow stress simulation", () => {
       const correct = i % 2 === 0;
       const choiceId = correct ? "a" : "b";
       const responseSeconds = 1 + (i % 5);
-      const points = calculateKahootPoints(correct, responseSeconds, 20);
+      const points = calculateKahootPoints(correct, responseSeconds, question.timeLimit);
 
       store.recordAnswer(`p-${i}`, question.id, choiceId, Date.now() + i, correct, points);
     }

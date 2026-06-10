@@ -9,6 +9,7 @@ import { ArrowLeft, Plus, Save, Download, AlertCircle } from "lucide-react";
 import { Quiz, Question } from "@/types";
 import { exportQuiz } from "@/utils/quizStorage";
 import { generateUUID } from "@/lib/utils";
+import { DEFAULT_QUESTION_TIME_LIMIT, sanitizeQuestionTimeLimit } from "@/utils/scoring";
 
 interface EditQuizPageProps {
   quizId: string;
@@ -26,6 +27,7 @@ function createEmptyQuestion(): Question {
       { id: generateUUID(), text: "" },
     ],
     correctChoiceIds: [],
+    timeLimit: DEFAULT_QUESTION_TIME_LIMIT,
   };
 }
 
@@ -68,7 +70,10 @@ export function EditQuizPage({ quizId }: EditQuizPageProps) {
       setOriginalQuiz(quiz);
       setTitle(quiz.title);
       setDescription(quiz.description || "");
-      setQuestions(quiz.questions);
+      setQuestions(quiz.questions.map((question) => ({
+        ...question,
+        timeLimit: sanitizeQuestionTimeLimit(question.timeLimit),
+      })));
     } else {
       navigate("/");
     }
@@ -118,6 +123,7 @@ export function EditQuizPage({ quizId }: EditQuizPageProps) {
     const cleanedQuestions = questions.map(q => ({
       ...q,
       choices: q.choices.filter(c => c.text.trim()),
+      timeLimit: sanitizeQuestionTimeLimit(q.timeLimit),
     }));
 
     const updatedQuiz: Quiz = {
