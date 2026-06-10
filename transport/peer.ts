@@ -1,5 +1,6 @@
 import Pusher, { Channel } from "pusher-js";
 import { PeerMessage, Question } from "../types";
+import { sanitizeQuestionTimeLimit } from "@/utils/scoring";
 
 // No longer needed - Pusher works in all modern browsers without WebRTC
 export function isWebRTCSupported(): boolean {
@@ -89,6 +90,7 @@ export class HostPeer {
       totalQuestions,
       startedAt: Date.now(),
       doublePoints: question.doublePoints ?? false,
+      questionDuration: sanitizeQuestionTimeLimit(question.timeLimit),
     });
   }
 

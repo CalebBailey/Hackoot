@@ -12,6 +12,7 @@ import { generateRoomCode } from "@/utils/roomCode";
 import { generateUUID } from "@/lib/utils";
 import { HostPeer, isWebRTCSupported } from "@/transport/peer";
 import { PeerMessage } from "@/types";
+import { sanitizeQuestionTimeLimit } from "@/utils/scoring";
 
 interface HostLobbyPageProps {
   quizId: string;
@@ -98,6 +99,7 @@ export function HostLobbyPage({ quizId }: HostLobbyPageProps) {
                 question: (({ correctChoiceIds, ...q }) => q)(currentQuestion),
                 questionIndex: qIdx!,
                 totalQuestions: quiz?.questions.length ?? 0,
+                questionDuration: sanitizeQuestionTimeLimit(currentQuestion.timeLimit),
                 answeredCurrentQuestion: existingParticipant.answeredCurrentQuestion,
               }
             : {}),

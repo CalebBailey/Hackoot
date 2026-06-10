@@ -1,9 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Question } from "@/types";
 import { GripVertical, Trash2, Check, Image, X, Zap } from "lucide-react";
 import { GiphyPicker } from "./GiphyPicker";
+import {
+  DEFAULT_QUESTION_TIME_LIMIT,
+  sanitizeQuestionTimeLimit,
+} from "@/utils/scoring";
 
 function isValidImageUrl(url: string): boolean {
   try {
@@ -27,9 +31,15 @@ export function QuestionEditor({
   onChange,
   onDelete,
 }: QuestionEditorProps) {
+  const timeLimit = sanitizeQuestionTimeLimit(question.timeLimit);
   const [imageInput, setImageInput] = useState(question.imageUrl ?? "");
   const [imageError, setImageError] = useState(false);
   const [showGiphyPicker, setShowGiphyPicker] = useState(false);
+  const [timeLimitInput, setTimeLimitInput] = useState(String(timeLimit));
+
+  useEffect(() => {
+    setTimeLimitInput(String(timeLimit));
+  }, [timeLimit]);
 
   const updateChoice = (choiceIndex: number, text: string) => {
     const newChoices = [...question.choices];
@@ -75,6 +85,32 @@ export function QuestionEditor({
     { bg: "bg-blue-500", ring: "ring-blue-400" },
   ];
   const labels = ["A", "B", "C", "D"];
+
+  const commitTimeLimitInput = () => {
+    const trimmed = timeLimitInput.trim();
+    if (trimmed === "") {
+      setTimeLimitInput(String(timeLimit));
+      return;
+    }
+
+    if (!/^\d+$/.test(trimmed)) {
+      setTimeLimitInput(String(timeLimit));
+      return;
+    }
+
+    const parsed = Number(trimmed);
+    if (!Number.isInteger(parsed) || parsed <= 0) {
+      setTimeLimitInput(String(timeLimit));
+      return;
+    }
+
+    const sanitized = sanitizeQuestionTimeLimit(parsed);
+    onChange({
+      ...question,
+      timeLimit: sanitized,
+    });
+    setTimeLimitInput(String(sanitized));
+  };
 
   return (
     <div className="glass-card p-5 space-y-4">
@@ -210,9 +246,34 @@ export function QuestionEditor({
           </div>
 
           {/* Info about scoring */}
-          <div className="flex items-center justify-between pt-1">
+          <div className="flex items-center justify-between gap-3 pt-1 flex-wrap">
+            <div className="flex items-center gap-2">
+              <label htmlFor={`time-limit-${question.id}`} className="text-xs text-[var(--text-secondary)]/80">
+                Time
+              </label>
+              <input
+                id={`time-limit-${question.id}`}
+                type="text"
+                inputMode="numeric"
+                pattern="[0-9]*"
+                value={timeLimitInput}
+                onChange={(e) => {
+                  const digitsOnly = e.target.value.replace(/\D/g, "");
+                  setTimeLimitInput(digitsOnly);
+                }}
+                onBlur={commitTimeLimitInput}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    commitTimeLimitInput();
+                  }
+                }}
+                className="w-16 bg-white/5 border border-white/10 rounded-lg px-2 py-1.5 text-sm text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--color-action)]/50 focus:border-[var(--color-action)]"
+              />
+              <span className="text-xs text-[var(--text-secondary)]/80">sec</span>
+            </div>
             <p className="text-xs text-[var(--text-secondary)]/60">
-              20 seconds per question - Up to {question.doublePoints ? "2000" : "1000"} points based on speed
+              {timeLimit || DEFAULT_QUESTION_TIME_LIMIT} seconds - Up to {question.doublePoints ? "2000" : "1000"} points based on speed
             </p>
             <button
               type="button"

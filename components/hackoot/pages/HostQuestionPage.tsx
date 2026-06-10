@@ -9,7 +9,7 @@ import { AnswerGrid } from "../AnswerGrid";
 import { navigate } from "../HackootApp";
 import { Users, Eye, Zap } from "lucide-react";
 import { HostPeer } from "@/transport/peer";
-import { calculateKahootPoints, getResponseTime, QUESTION_TIME_LIMIT } from "@/utils/scoring";
+import { calculateKahootPoints, getResponseTime, sanitizeQuestionTimeLimit } from "@/utils/scoring";
 
 interface HostQuestionPageProps {
   quizId: string;
@@ -33,6 +33,7 @@ export function HostQuestionPage({ quizId }: HostQuestionPageProps) {
   // Get question index from session, default to 0 if not started
   const currentQuestionIndex = session?.currentQuestionIndex ?? 0;
   const currentQuestion = quiz?.questions[currentQuestionIndex];
+  const questionDuration = sanitizeQuestionTimeLimit(currentQuestion?.timeLimit);
 
   useEffect(() => {
     if (!quiz || !session || !hostPeer || initialized) {
@@ -48,7 +49,7 @@ export function HostQuestionPage({ quizId }: HostQuestionPageProps) {
       return;
     }
 
-    startQuestion(currentQuestionIndex, question);
+    startQuestion(currentQuestionIndex, question, questionDuration);
     questionStartTimeRef.current = Date.now();
     setTimerRunning(true);
     setCanReveal(false);
@@ -63,11 +64,11 @@ export function HostQuestionPage({ quizId }: HostQuestionPageProps) {
 
       const responseTime = getResponseTime(questionStartTimeRef.current, submittedAt);
       const correct = question.correctChoiceIds.includes(choiceId);
-      const points = calculateKahootPoints(correct, responseTime, QUESTION_TIME_LIMIT, question.doublePoints ?? false);
+      const points = calculateKahootPoints(correct, responseTime, questionDuration, question.doublePoints ?? false);
 
       recordAnswer(participantId, questionId, choiceId, submittedAt, correct, points);
     };
-  }, [quiz, session, hostPeer, currentQuestionIndex, startQuestion, recordAnswer, initialized]);
+  }, [quiz, session, hostPeer, currentQuestionIndex, startQuestion, recordAnswer, initialized, questionDuration]);
 
   // Reset initialized when navigating to a new question
   useEffect(() => {
@@ -115,7 +116,7 @@ export function HostQuestionPage({ quizId }: HostQuestionPageProps) {
         </div>
         <div className="flex justify-center">
           <Timer
-            totalSeconds={QUESTION_TIME_LIMIT}
+            totalSeconds={questionDuration}
             onExpire={handleTimerExpire}
             running={timerRunning}
           />

@@ -8,6 +8,7 @@ import { navigate } from "../HackootApp";
 import { ArrowLeft, Plus, Save, AlertCircle } from "lucide-react";
 import { Quiz, Question } from "@/types";
 import { generateUUID } from "@/lib/utils";
+import { DEFAULT_QUESTION_TIME_LIMIT, sanitizeQuestionTimeLimit } from "@/utils/scoring";
 
 function createEmptyQuestion(): Question {
   return {
@@ -21,6 +22,7 @@ function createEmptyQuestion(): Question {
       { id: generateUUID(), text: "" },
     ],
     correctChoiceIds: [],
+    timeLimit: DEFAULT_QUESTION_TIME_LIMIT,
   };
 }
 
@@ -102,6 +104,7 @@ export function CreateQuizPage() {
     const cleanedQuestions = questions.map(q => ({
       ...q,
       choices: q.choices.filter(c => c.text.trim()),
+      timeLimit: sanitizeQuestionTimeLimit(q.timeLimit),
     }));
 
     const quiz: Quiz = {

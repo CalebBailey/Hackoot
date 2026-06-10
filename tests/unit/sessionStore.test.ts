@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import { useSessionStore } from "@/store/sessionStore";
 import { Question } from "@/types";
+import { DEFAULT_QUESTION_TIME_LIMIT } from "@/utils/scoring";
 
 const sampleQuestion: Question = {
   id: "q1",
@@ -11,6 +12,12 @@ const sampleQuestion: Question = {
     { id: "b", text: "B" },
   ],
   correctChoiceIds: ["a"],
+};
+
+const timedQuestion: Question = {
+  ...sampleQuestion,
+  id: "q2",
+  timeLimit: 30,
 };
 
 describe("sessionStore", () => {
@@ -50,6 +57,38 @@ describe("sessionStore", () => {
     expect(session?.participants[0].answeredCurrentQuestion).toBe(false);
   });
 
+  it("uses default duration for legacy questions without time limit", () => {
+    const store = useSessionStore.getState();
+    store.initSession("s1", "quiz1", "ROOM01");
+
+    store.startQuestion(0, sampleQuestion);
+
+    expect(useSessionStore.getState().currentQuestionDuration).toBe(DEFAULT_QUESTION_TIME_LIMIT);
+  });
+
+  it("uses question time limit when present", () => {
+    const store = useSessionStore.getState();
+    store.initSession("s1", "quiz1", "ROOM01");
+
+    store.startQuestion(0, timedQuestion);
+
+    expect(useSessionStore.getState().currentQuestionDuration).toBe(30);
+  });
+
+  it("prefers explicit duration argument and normalizes invalid values", () => {
+    const store = useSessionStore.getState();
+    store.initSession("s1", "quiz1", "ROOM01");
+
+    store.startQuestion(0, timedQuestion, 5);
+    expect(useSessionStore.getState().currentQuestionDuration).toBe(5);
+
+    store.startQuestion(1, timedQuestion, 120);
+    expect(useSessionStore.getState().currentQuestionDuration).toBe(120);
+
+    store.startQuestion(2, timedQuestion, 0);
+    expect(useSessionStore.getState().currentQuestionDuration).toBe(1);
+  });
+
   it("records an answer and updates score", () => {
     const store = useSessionStore.getState();
     store.initSession("s1", "quiz1", "ROOM01");
@@ -73,5 +112,15 @@ describe("sessionStore", () => {
 
     expect(leaderboard[0]).toMatchObject({ participantId: "p2", rank: 1 });
     expect(leaderboard[1]).toMatchObject({ participantId: "p1", rank: 2 });
+  });
+
+  it("reset restores default question duration", () => {
+    const store = useSessionStore.getState();
+    store.initSession("s1", "quiz1", "ROOM01");
+    store.startQuestion(0, timedQuestion);
+
+    store.reset();
+
+    expect(useSessionStore.getState().currentQuestionDuration).toBe(DEFAULT_QUESTION_TIME_LIMIT);
   });
 });
