@@ -45,6 +45,7 @@ Add `team-building` as a quiz type beside `standard`.
 ### 4.2 Question capabilities
 
 - This or that (A or B): two-option structured choice question.
+- Select and type in question: Select between multiple options or introduce a custom answer.
 - Type in answer: free-text question with configurable max answers per player.
 - Discussion question: free-text submission phase followed by voting phase.
 
@@ -242,6 +243,7 @@ Changes:
 - Add Team Building question templates:
   - this-or-that editor (exactly 2 options)
   - free-text limits
+  - Multiple choice and/or input question
   - discussion voting limits
 - Show quiz type tag on cards.
 
@@ -359,14 +361,12 @@ export interface WordCloudTerm {
 
 ### 12.2 Phase 3 (new persistence)
 
-Introduce server-side storage for:
+Introduce new JSON export and import option:
 
 - response corpus
 - grouped clusters
 - vote summaries
 - reusable insight records
-
-This requires selecting a backend data store and adding authenticated APIs.
 
 ## 13. Moderation and Privacy Guardrails
 
@@ -397,7 +397,7 @@ For Quiplash-style movement while keeping performance and accessibility:
 Deliver:
 
 - `quizType` support with backward compatibility.
-- this-or-that, free-text, discussion question models and editor UI.
+- this-or-that, free-text, multiple choice with free-text, discussion question models and editor UI.
 - Team Building host/player flow with submission and discussion voting.
 - deterministic grouping and word cloud generation.
 - no scoring/podium for Team Building sessions.
@@ -435,46 +435,6 @@ Acceptance checks:
 - host can inspect and export suggestions.
 - sensitive data exclusions respected.
 
-## 16. Testing Strategy Against Existing Test Setup
-
-Current test tooling already exists (Vitest + Playwright).
-
-### 16.1 Unit tests
-
-Add under `tests/unit`:
-
-- `teamBuildingNormalise.test.ts`
-- `teamBuildingGrouping.test.ts`
-- `teamBuildingWordCloud.test.ts`
-- `teamBuildingVoting.test.ts`
-
-### 16.2 Integration tests
-
-Add under `tests/integration`:
-
-- `teamBuildingSessionFlow.test.ts`
-
-Scenarios:
-
-- multi-answer submission
-- self-match prevention
-- vote limit enforcement
-- host discussion queue ordering
-
-### 16.3 E2E tests
-
-Add under `tests/e2e`:
-
-- `team-building-smoke.spec.ts`
-- `team-building-discussion.spec.ts`
-
-### 16.4 Regression tests
-
-Keep current Standard-mode tests and add explicit assertions that:
-
-- scoring remains active for Standard only
-- Team Building never shows podium or winner framing
-
 ## 17. Delivery Risks and Mitigations
 
 - Risk: extending message contracts breaks live sessions.
@@ -510,11 +470,6 @@ Keep current Standard-mode tests and add explicit assertions that:
 - Add Team Building output export shape.
 - Add privacy defaults and sensitive-question exclusion flags.
 - Add moderation utility for player-visible text.
-
-### Quality
-
-- Add unit, integration, and E2E tests for new flow.
-- Add regression tests for unchanged Standard mode.
 
 ## 19. Summary
 

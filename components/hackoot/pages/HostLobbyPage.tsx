@@ -13,6 +13,7 @@ import { generateUUID } from "@/lib/utils";
 import { HostPeer, isWebRTCSupported } from "@/transport/peer";
 import { PeerMessage } from "@/types";
 import { sanitizeQuestionTimeLimit } from "@/utils/scoring";
+import { resolveQuizType } from "@/utils/teamBuilding";
 
 interface HostLobbyPageProps {
   quizId: string;
@@ -47,8 +48,9 @@ export function HostLobbyPage({ quizId }: HostLobbyPageProps) {
 
     const roomCode = generateRoomCode();
     const sessionId = generateUUID();
+    const quizType = resolveQuizType(quiz.quizType);
 
-    initSession(sessionId, quizId, roomCode);
+    initSession(sessionId, quizId, roomCode, quizType);
     setIsHost(true);
 
     const hostPeer = new HostPeer();
@@ -87,20 +89,37 @@ export function HostLobbyPage({ quizId }: HostLobbyPageProps) {
         const qIdx = updatedSession.currentQuestionIndex;
         const currentQuestion = qIdx !== null ? quiz?.questions[qIdx] : null;
         const leaderboard = useSessionStore.getState().getLeaderboard();
+        const storeSnapshot = useSessionStore.getState();
+        const publicQuestion = currentQuestion
+          ? currentQuestion.type === "mcq"
+            ? (({ correctChoiceIds, ...question }) => question)(currentQuestion)
+            : currentQuestion
+          : undefined;
 
         const rejoinMsg: PeerMessage = {
           type: "rejoinAck",
           participantId,
           sessionState: updatedSession.state,
+          quizType: updatedSession.quizType,
           score: existingParticipant.score,
           leaderboard,
-          ...(updatedSession.state === "question" && currentQuestion
+          ...((updatedSession.state === "question" || updatedSession.state === "team-submission") && currentQuestion
             ? {
-                question: (({ correctChoiceIds, ...q }) => q)(currentQuestion),
+                question: publicQuestion,
                 questionIndex: qIdx!,
                 totalQuestions: quiz?.questions.length ?? 0,
                 questionDuration: sanitizeQuestionTimeLimit(currentQuestion.timeLimit),
                 answeredCurrentQuestion: existingParticipant.answeredCurrentQuestion,
+              }
+            : {}),
+          ...(updatedSession.state === "team-voting" && storeSnapshot.teamVoteContext
+            ? {
+                teamVoteContext: storeSnapshot.teamVoteContext,
+              }
+            : {}),
+          ...(updatedSession.state === "team-results" && storeSnapshot.teamResultsSnapshot
+            ? {
+                teamResultsSnapshot: storeSnapshot.teamResultsSnapshot,
               }
             : {}),
         };
@@ -193,7 +212,7 @@ export function HostLobbyPage({ quizId }: HostLobbyPageProps) {
             {quiz.title}
           </h1>
           <p className="text-sm text-[var(--text-secondary)]">
-            {quiz.questions.length} questions
+            {quiz.questions.length} questions - {resolveQuizType(quiz.quizType) === "team-building" ? "Team Building" : "Standard"}
           </p>
         </div>
       </div>

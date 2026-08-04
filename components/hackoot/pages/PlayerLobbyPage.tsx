@@ -5,7 +5,22 @@ import { useSessionStore } from "@/store/sessionStore";
 import { navigate } from "../HackootApp";
 import { Users, Wifi } from "lucide-react";
 import { PlayerPeer } from "@/transport/peer";
-import { PeerMessage } from "@/types";
+import { PeerMessage, Question } from "@/types";
+
+function toRuntimeQuestion(message: Extract<PeerMessage, { type: "questionStarted" | "rejoinAck" }> ) {
+  if (!message.question) {
+    return null;
+  }
+
+  if (message.question.type === "mcq") {
+    return {
+      ...message.question,
+      correctChoiceIds: [],
+    } as Question;
+  }
+
+  return message.question as Question;
+}
 
 export function PlayerLobbyPage() {
   const participantName = useSessionStore((state) => state.participantName);
@@ -15,6 +30,10 @@ export function PlayerLobbyPage() {
   const setCurrentQuestion = useSessionStore((state) => state.setCurrentQuestion);
   const updateLeaderboard = useSessionStore((state) => state.updateLeaderboard);
   const setHasAnsweredCurrentQuestion = useSessionStore((state) => state.setHasAnsweredCurrentQuestion);
+  const setSessionState = useSessionStore((state) => state.setSessionState);
+  const setSessionQuizType = useSessionStore((state) => state.setSessionQuizType);
+  const setTeamVoteContext = useSessionStore((state) => state.setTeamVoteContext);
+  const setTeamResultsSnapshot = useSessionStore((state) => state.setTeamResultsSnapshot);
 
   const [participants, setParticipants] = useState<{ id: string; name: string }[]>([]);
 
@@ -30,22 +49,40 @@ export function PlayerLobbyPage() {
       if (message.type === "lobbyUpdate") {
         setParticipants(message.participants);
       } else if (message.type === "questionStarted") {
-        setCurrentQuestion({
-          ...message.question,
-          correctChoiceIds: [],
-        });
-        startQuestion(message.questionIndex, {
-          ...message.question,
-          correctChoiceIds: [],
-        }, message.questionDuration);
+        const runtimeQuestion = toRuntimeQuestion(message);
+        if (!runtimeQuestion) return;
+        const runtimeQuizType = runtimeQuestion.type === "mcq" ? "standard" : "team-building";
+        setSessionQuizType(runtimeQuizType);
+        setSessionState(runtimeQuizType === "team-building" ? "team-submission" : "question");
+        setCurrentQuestion(runtimeQuestion);
+        startQuestion(message.questionIndex, runtimeQuestion, message.questionDuration);
         navigate("/play/question");
       } else if (message.type === "rejoinAck" && message.participantId === participantId) {
+        if (message.quizType) {
+          setSessionQuizType(message.quizType);
+        }
+
         // Restore the player to the correct point in the session
-        if (message.sessionState === "question" && message.question !== undefined) {
+        if ((message.sessionState === "question" || message.sessionState === "team-submission") && message.question !== undefined) {
+          const runtimeQuestion = toRuntimeQuestion(message);
+          if (!runtimeQuestion) return;
           setHasAnsweredCurrentQuestion(message.answeredCurrentQuestion ?? false);
-          setCurrentQuestion({ ...message.question, correctChoiceIds: [] });
-          startQuestion(message.questionIndex!, { ...message.question, correctChoiceIds: [] }, message.questionDuration);
+          setCurrentQuestion(runtimeQuestion);
+          setSessionState(message.sessionState);
+          startQuestion(message.questionIndex!, runtimeQuestion, message.questionDuration);
           navigate("/play/question");
+        } else if (message.sessionState === "team-voting") {
+          if (message.teamVoteContext) {
+            setTeamVoteContext(message.teamVoteContext);
+          }
+          setSessionState("team-voting");
+          navigate("/play/voting");
+        } else if (message.sessionState === "team-results") {
+          if (message.teamResultsSnapshot) {
+            setTeamResultsSnapshot(message.teamResultsSnapshot);
+          }
+          setSessionState("team-results");
+          navigate("/play/result");
         } else if (
           message.sessionState === "reveal" ||
           message.sessionState === "leaderboard"
@@ -63,7 +100,18 @@ export function PlayerLobbyPage() {
     playerPeer.onDisconnect = () => {
       navigate("/join");
     };
-  }, [playerPeer, startQuestion, setCurrentQuestion]);
+  }, [
+    playerPeer,
+    startQuestion,
+    setCurrentQuestion,
+    setHasAnsweredCurrentQuestion,
+    setSessionState,
+    setSessionQuizType,
+    setTeamVoteContext,
+    setTeamResultsSnapshot,
+    updateLeaderboard,
+    participantId,
+  ]);
 
   if (!participantName) {
     navigate("/join");

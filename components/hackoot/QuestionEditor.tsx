@@ -1,13 +1,27 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Question } from "@/types";
-import { GripVertical, Trash2, Check, Image, X, Zap } from "lucide-react";
+import { Choice, Question, QuizType } from "@/types";
+import {
+  GripVertical,
+  Trash2,
+  Check,
+  Image,
+  X,
+  Zap,
+  Plus,
+  Minus,
+} from "lucide-react";
 import { GiphyPicker } from "./GiphyPicker";
 import {
   DEFAULT_QUESTION_TIME_LIMIT,
   sanitizeQuestionTimeLimit,
 } from "@/utils/scoring";
+import { generateUUID } from "@/lib/utils";
+import {
+  TeamQuestionType,
+  createEmptyTeamQuestion,
+} from "@/utils/teamBuilding";
 
 function isValidImageUrl(url: string): boolean {
   try {
@@ -20,6 +34,7 @@ function isValidImageUrl(url: string): boolean {
 
 interface QuestionEditorProps {
   question: Question;
+  quizType: QuizType;
   index: number;
   onChange: (question: Question) => void;
   onDelete: () => void;
@@ -27,6 +42,7 @@ interface QuestionEditorProps {
 
 export function QuestionEditor({
   question,
+  quizType,
   index,
   onChange,
   onDelete,
@@ -41,14 +57,82 @@ export function QuestionEditor({
     setTimeLimitInput(String(timeLimit));
   }, [timeLimit]);
 
-  const updateChoice = (choiceIndex: number, text: string) => {
-    const newChoices = [...question.choices];
-    newChoices[choiceIndex] = { ...newChoices[choiceIndex], text };
-    onChange({ ...question, choices: newChoices });
+  const updateMcqChoice = (choiceIndex: number, text: string) => {
+    if (question.type !== "mcq") return;
+    const nextChoices = [...question.choices];
+    nextChoices[choiceIndex] = { ...nextChoices[choiceIndex], text };
+    onChange({ ...question, choices: nextChoices });
+  };
+
+  const updateTeamOption = (optionIndex: number, text: string) => {
+    if (question.type === "this-or-that") {
+      const nextOptions: [Choice, Choice] = [...question.options];
+      nextOptions[optionIndex] = { ...nextOptions[optionIndex], text };
+      onChange({ ...question, options: nextOptions });
+      return;
+    }
+
+    if (question.type === "select-or-text") {
+      const nextOptions = [...question.options];
+      nextOptions[optionIndex] = { ...nextOptions[optionIndex], text };
+      onChange({ ...question, options: nextOptions });
+    }
   };
 
   const setCorrectAnswer = (choiceId: string) => {
+    if (question.type !== "mcq") return;
     onChange({ ...question, correctChoiceIds: [choiceId] });
+  };
+
+  const switchTeamQuestionType = (nextType: TeamQuestionType) => {
+    if (quizType !== "team-building") return;
+    const nextQuestion = createEmptyTeamQuestion(nextType);
+    onChange({
+      ...nextQuestion,
+      id: question.id,
+      text: question.text,
+      imageUrl: question.imageUrl,
+      timeLimit: question.timeLimit,
+    });
+  };
+
+  const addSelectOrTextOption = () => {
+    if (question.type !== "select-or-text") return;
+    onChange({
+      ...question,
+      options: [...question.options, { id: generateUUID(), text: "" }],
+    });
+  };
+
+  const removeSelectOrTextOption = (choiceId: string) => {
+    if (question.type !== "select-or-text") return;
+    if (question.options.length <= 2) return;
+    onChange({
+      ...question,
+      options: question.options.filter((choice) => choice.id !== choiceId),
+    });
+  };
+
+  const updateMaxAnswers = (value: string) => {
+    const numeric = Number(value);
+    const safeValue = Number.isFinite(numeric) && numeric > 0 ? Math.floor(numeric) : 1;
+
+    if (question.type === "free-text" || question.type === "discussion" || question.type === "select-or-text") {
+      onChange({
+        ...question,
+        maxAnswersPerPlayer: safeValue,
+      });
+    }
+  };
+
+  const updateMaxVotes = (value: string) => {
+    if (question.type !== "discussion") return;
+    const numeric = Number(value);
+    const safeValue = Number.isFinite(numeric) && numeric > 0 ? Math.floor(numeric) : 1;
+    onChange({
+      ...question,
+      maxVotesPerPlayer: safeValue,
+    });
   };
 
   const handleImageUrlCommit = () => {
@@ -85,6 +169,12 @@ export function QuestionEditor({
     { bg: "bg-blue-500", ring: "ring-blue-400" },
   ];
   const labels = ["A", "B", "C", "D"];
+  const teamTypeLabels: Record<TeamQuestionType, string> = {
+    "this-or-that": "This or that",
+    "free-text": "Type in answer",
+    "select-or-text": "Select and type",
+    discussion: "Discussion",
+  };
 
   const commitTimeLimitInput = () => {
     const trimmed = timeLimitInput.trim();
@@ -132,6 +222,23 @@ export function QuestionEditor({
               <Trash2 className="w-4 h-4" />
             </button>
           </div>
+
+          {quizType === "team-building" && (
+            <div className="space-y-1">
+              <label className="block text-xs font-medium text-[var(--text-secondary)]">Question type</label>
+              <select
+                value={question.type === "mcq" ? "this-or-that" : question.type}
+                onChange={(e) => switchTeamQuestionType(e.target.value as TeamQuestionType)}
+                className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--color-action)]/50 focus:border-[var(--color-action)]"
+              >
+                {(Object.keys(teamTypeLabels) as TeamQuestionType[]).map((type) => (
+                  <option key={type} value={type} className="bg-slate-900 text-white">
+                    {teamTypeLabels[type]}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
 
           {/* Question text */}
           <input
@@ -204,90 +311,200 @@ export function QuestionEditor({
             )}
           </div>
 
-          {/* Choices - click the button to mark as correct */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            {question.choices.map((choice, choiceIndex) => {
-              const isCorrect = question.correctChoiceIds.includes(choice.id);
-              const color = colors[choiceIndex];
+          {question.type === "mcq" && (
+            <>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {question.choices.map((choice, choiceIndex) => {
+                  const isCorrect = question.correctChoiceIds.includes(choice.id);
+                  const color = colors[choiceIndex] ?? colors[0];
 
-              return (
-                <div key={choice.id} className="flex items-center gap-2">
-                  <button
-                    type="button"
-                    onClick={() => setCorrectAnswer(choice.id)}
-                    className={`relative w-9 h-9 rounded-lg flex items-center justify-center text-white font-bold text-sm shrink-0 transition-all ${color.bg} ${
-                      isCorrect 
-                        ? `ring-2 ${color.ring} ring-offset-2 ring-offset-[#1a1025] scale-105` 
-                        : "opacity-50 hover:opacity-75"
-                    }`}
-                    aria-label={`Mark answer ${labels[choiceIndex]} as correct`}
-                    aria-pressed={isCorrect}
-                  >
-                    {isCorrect ? (
-                      <Check className="w-5 h-5" strokeWidth={3} />
-                    ) : (
-                      labels[choiceIndex]
-                    )}
-                  </button>
+                  return (
+                    <div key={choice.id} className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setCorrectAnswer(choice.id)}
+                        className={`relative w-9 h-9 rounded-lg flex items-center justify-center text-white font-bold text-sm shrink-0 transition-all ${color.bg} ${
+                          isCorrect
+                            ? `ring-2 ${color.ring} ring-offset-2 ring-offset-[#1a1025] scale-105`
+                            : "opacity-50 hover:opacity-75"
+                        }`}
+                        aria-label={`Mark answer ${labels[choiceIndex] ?? "A"} as correct`}
+                        aria-pressed={isCorrect}
+                      >
+                        {isCorrect ? <Check className="w-5 h-5" strokeWidth={3} /> : labels[choiceIndex] ?? "A"}
+                      </button>
+                      <input
+                        type="text"
+                        value={choice.text}
+                        onChange={(e) => updateMcqChoice(choiceIndex, e.target.value)}
+                        placeholder={`Answer ${labels[choiceIndex] ?? "A"}`}
+                        className="flex-1 bg-white/5 border border-white/10 rounded-lg px-3 py-2.5 text-[var(--text-primary)] placeholder:text-[var(--text-secondary)]/50 focus:outline-none focus:ring-2 focus:ring-[var(--color-action)]/50 focus:border-[var(--color-action)] transition-all"
+                      />
+                    </div>
+                  );
+                })}
+              </div>
+
+              <div className="flex items-center justify-between gap-3 pt-1 flex-wrap">
+                <p className="text-xs text-[var(--text-secondary)]/60">
+                  {timeLimit || DEFAULT_QUESTION_TIME_LIMIT} seconds - Up to {question.doublePoints ? "2000" : "1000"} points based on speed
+                </p>
+                <button
+                  type="button"
+                  onClick={() => onChange({ ...question, doublePoints: !question.doublePoints })}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold border transition-all ${
+                    question.doublePoints
+                      ? "bg-amber-500/20 border-amber-400/60 text-amber-300 ring-1 ring-amber-400/40"
+                      : "bg-white/5 border-white/10 text-[var(--text-secondary)] hover:border-amber-400/40 hover:text-amber-300"
+                  }`}
+                  aria-pressed={question.doublePoints ?? false}
+                >
+                  <Zap className="w-3.5 h-3.5" />
+                  Double Points
+                </button>
+              </div>
+            </>
+          )}
+
+          {question.type === "this-or-that" && (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {question.options.map((option, optionIndex) => (
+                <div key={option.id} className="space-y-1">
+                  <label className="text-xs text-[var(--text-secondary)]">
+                    {optionIndex === 0 ? "This" : "That"}
+                  </label>
                   <input
                     type="text"
-                    value={choice.text}
-                    onChange={(e) => updateChoice(choiceIndex, e.target.value)}
-                    placeholder={`Answer ${labels[choiceIndex]}`}
-                    className={`flex-1 bg-white/5 border rounded-lg px-3 py-2.5 text-[var(--text-primary)] placeholder:text-[var(--text-secondary)]/50 focus:outline-none focus:ring-2 focus:ring-[var(--color-action)]/50 transition-all ${
-                      isCorrect 
-                        ? `border-${color.bg.replace('bg-', '')}/50` 
-                        : "border-white/10 focus:border-[var(--color-action)]"
-                    }`}
+                    value={option.text}
+                    onChange={(e) => updateTeamOption(optionIndex, e.target.value)}
+                    placeholder={optionIndex === 0 ? "Option A" : "Option B"}
+                    className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2.5 text-[var(--text-primary)] placeholder:text-[var(--text-secondary)]/50 focus:outline-none focus:ring-2 focus:ring-[var(--color-action)]/50 focus:border-[var(--color-action)] transition-all"
                   />
                 </div>
-              );
-            })}
-          </div>
-
-          {/* Info about scoring */}
-          <div className="flex items-center justify-between gap-3 pt-1 flex-wrap">
-            <div className="flex items-center gap-2">
-              <label htmlFor={`time-limit-${question.id}`} className="text-xs text-[var(--text-secondary)]/80">
-                Time
-              </label>
-              <input
-                id={`time-limit-${question.id}`}
-                type="text"
-                inputMode="numeric"
-                pattern="[0-9]*"
-                value={timeLimitInput}
-                onChange={(e) => {
-                  const digitsOnly = e.target.value.replace(/\D/g, "");
-                  setTimeLimitInput(digitsOnly);
-                }}
-                onBlur={commitTimeLimitInput}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") {
-                    e.preventDefault();
-                    commitTimeLimitInput();
-                  }
-                }}
-                className="w-16 bg-white/5 border border-white/10 rounded-lg px-2 py-1.5 text-sm text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--color-action)]/50 focus:border-[var(--color-action)]"
-              />
-              <span className="text-xs text-[var(--text-secondary)]/80">sec</span>
+              ))}
             </div>
-            <p className="text-xs text-[var(--text-secondary)]/60">
-              {timeLimit || DEFAULT_QUESTION_TIME_LIMIT} seconds - Up to {question.doublePoints ? "2000" : "1000"} points based on speed
-            </p>
-            <button
-              type="button"
-              onClick={() => onChange({ ...question, doublePoints: !question.doublePoints })}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold border transition-all ${
-                question.doublePoints
-                  ? "bg-amber-500/20 border-amber-400/60 text-amber-300 ring-1 ring-amber-400/40"
-                  : "bg-white/5 border-white/10 text-[var(--text-secondary)] hover:border-amber-400/40 hover:text-amber-300"
-              }`}
-              aria-pressed={question.doublePoints ?? false}
-            >
-              <Zap className="w-3.5 h-3.5" />
-              Double Points
-            </button>
+          )}
+
+          {question.type === "select-or-text" && (
+            <div className="space-y-3">
+              <div className="space-y-2">
+                {question.options.map((option, optionIndex) => (
+                  <div key={option.id} className="flex items-center gap-2">
+                    <span className="w-8 text-xs text-[var(--text-secondary)]">{labels[optionIndex] ?? `O${optionIndex + 1}`}</span>
+                    <input
+                      type="text"
+                      value={option.text}
+                      onChange={(e) => updateTeamOption(optionIndex, e.target.value)}
+                      placeholder={`Option ${optionIndex + 1}`}
+                      className="flex-1 bg-white/5 border border-white/10 rounded-lg px-3 py-2.5 text-[var(--text-primary)] placeholder:text-[var(--text-secondary)]/50 focus:outline-none focus:ring-2 focus:ring-[var(--color-action)]/50 focus:border-[var(--color-action)] transition-all"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => removeSelectOrTextOption(option.id)}
+                      disabled={question.options.length <= 2}
+                      className="p-2 rounded-lg border border-white/10 text-[var(--text-secondary)] hover:text-rose-300 hover:border-rose-400/40 disabled:opacity-40 disabled:cursor-not-allowed"
+                      aria-label="Remove option"
+                    >
+                      <Minus className="w-4 h-4" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+
+              <div className="flex flex-wrap items-center gap-3">
+                <button
+                  type="button"
+                  onClick={addSelectOrTextOption}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-white/10 bg-white/5 text-xs text-[var(--text-secondary)] hover:border-[var(--color-action)]/40 hover:text-[var(--color-action)]"
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                  Add option
+                </button>
+                <label className="flex items-center gap-2 text-xs text-[var(--text-secondary)]">
+                  <input
+                    type="checkbox"
+                    checked={question.allowCustomAnswer ?? true}
+                    onChange={(e) => onChange({ ...question, allowCustomAnswer: e.target.checked })}
+                  />
+                  Allow custom answer
+                </label>
+              </div>
+
+              <div>
+                <label className="block text-xs text-[var(--text-secondary)] mb-1">Max answers per player</label>
+                <input
+                  type="number"
+                  min={1}
+                  value={question.maxAnswersPerPlayer ?? 3}
+                  onChange={(e) => updateMaxAnswers(e.target.value)}
+                  className="w-24 bg-white/5 border border-white/10 rounded-lg px-3 py-1.5 text-sm text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--color-action)]/50 focus:border-[var(--color-action)]"
+                />
+              </div>
+            </div>
+          )}
+
+          {question.type === "free-text" && (
+            <div>
+              <label className="block text-xs text-[var(--text-secondary)] mb-1">Max answers per player</label>
+              <input
+                type="number"
+                min={1}
+                value={question.maxAnswersPerPlayer ?? 3}
+                onChange={(e) => updateMaxAnswers(e.target.value)}
+                className="w-24 bg-white/5 border border-white/10 rounded-lg px-3 py-1.5 text-sm text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--color-action)]/50 focus:border-[var(--color-action)]"
+              />
+            </div>
+          )}
+
+          {question.type === "discussion" && (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <label className="block text-xs text-[var(--text-secondary)] mb-1">Max answers per player</label>
+                <input
+                  type="number"
+                  min={1}
+                  value={question.maxAnswersPerPlayer ?? 3}
+                  onChange={(e) => updateMaxAnswers(e.target.value)}
+                  className="w-24 bg-white/5 border border-white/10 rounded-lg px-3 py-1.5 text-sm text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--color-action)]/50 focus:border-[var(--color-action)]"
+                />
+              </div>
+              <div>
+                <label className="block text-xs text-[var(--text-secondary)] mb-1">Max votes per player</label>
+                <input
+                  type="number"
+                  min={1}
+                  value={question.maxVotesPerPlayer ?? 3}
+                  onChange={(e) => updateMaxVotes(e.target.value)}
+                  className="w-24 bg-white/5 border border-white/10 rounded-lg px-3 py-1.5 text-sm text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--color-action)]/50 focus:border-[var(--color-action)]"
+                />
+              </div>
+            </div>
+          )}
+
+          <div className="flex items-center gap-2 pt-1">
+            <label htmlFor={`time-limit-${question.id}`} className="text-xs text-[var(--text-secondary)]/80">
+              Time
+            </label>
+            <input
+              id={`time-limit-${question.id}`}
+              type="text"
+              inputMode="numeric"
+              pattern="[0-9]*"
+              value={timeLimitInput}
+              onChange={(e) => {
+                const digitsOnly = e.target.value.replace(/\D/g, "");
+                setTimeLimitInput(digitsOnly);
+              }}
+              onBlur={commitTimeLimitInput}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  e.preventDefault();
+                  commitTimeLimitInput();
+                }
+              }}
+              className="w-16 bg-white/5 border border-white/10 rounded-lg px-2 py-1.5 text-sm text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--color-action)]/50 focus:border-[var(--color-action)]"
+            />
+            <span className="text-xs text-[var(--text-secondary)]/80">sec</span>
           </div>
         </div>
       </div>
