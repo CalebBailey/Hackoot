@@ -5,7 +5,7 @@ import { useQuizStore } from "@/store/quizStore";
 import { Button } from "../Button";
 import { QuestionEditor } from "../QuestionEditor";
 import { navigate } from "../HackootApp";
-import { ArrowLeft, Plus, Save, Download, AlertCircle } from "lucide-react";
+import { ArrowLeft, Plus, Minus, Save, Download, AlertCircle } from "lucide-react";
 import { Choice, Quiz, Question, QuizType, TeamBuildingQuizSettings } from "@/types";
 import { generateUUID } from "@/lib/utils";
 import { exportQuiz } from "@/utils/quizStorage";
@@ -292,75 +292,154 @@ export function EditQuizPage({ quizId }: EditQuizPageProps) {
         </div>
 
         {quizType === "team-building" && (
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 p-3 rounded-lg bg-white/[0.03] border border-white/10">
-            <label className="text-sm text-[var(--text-secondary)] flex items-center justify-between gap-3">
+          <div className="space-y-3 p-3 rounded-lg bg-white/[0.03] border border-white/10">
+            <p className="text-xs uppercase tracking-wide text-[var(--text-secondary)]/80">
+              Team Building settings
+            </p>
+
+            <label className="text-sm text-[var(--text-secondary)] flex items-center justify-between gap-3 rounded-lg border border-white/10 bg-white/[0.02] px-3 py-2.5">
               Enable word cloud
-              <input
-                type="checkbox"
-                checked={teamBuildingSettings.enableWordCloud}
-                onChange={(e) =>
-                  setTeamBuildingSettings((current) => ({
-                    ...current,
-                    enableWordCloud: e.target.checked,
-                  }))
-                }
-              />
+              <span className="relative inline-flex h-6 w-11 shrink-0">
+                <input
+                  type="checkbox"
+                  checked={teamBuildingSettings.enableWordCloud}
+                  onChange={(e) =>
+                    setTeamBuildingSettings((current) => ({
+                      ...current,
+                      enableWordCloud: e.target.checked,
+                    }))
+                  }
+                  className="peer sr-only"
+                />
+                <span className="absolute inset-0 rounded-full border border-white/15 bg-white/10 transition-colors peer-checked:bg-[var(--color-action)]/30 peer-checked:border-[var(--color-action)]/50 peer-focus-visible:ring-2 peer-focus-visible:ring-[var(--color-action)]/50" aria-hidden="true" />
+                <span className="absolute left-0.5 top-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform peer-checked:translate-x-5" aria-hidden="true" />
+              </span>
             </label>
-            <label className="text-sm text-[var(--text-secondary)] flex items-center justify-between gap-3">
+
+            <label className="text-sm text-[var(--text-secondary)] flex items-center justify-between gap-3 rounded-lg border border-white/10 bg-white/[0.02] px-3 py-2.5">
               Enable discussion voting
-              <input
-                type="checkbox"
-                checked={teamBuildingSettings.enableDiscussionVoting}
-                onChange={(e) =>
-                  setTeamBuildingSettings((current) => ({
-                    ...current,
-                    enableDiscussionVoting: e.target.checked,
-                  }))
-                }
-              />
+              <span className="relative inline-flex h-6 w-11 shrink-0">
+                <input
+                  type="checkbox"
+                  checked={teamBuildingSettings.enableDiscussionVoting}
+                  onChange={(e) =>
+                    setTeamBuildingSettings((current) => ({
+                      ...current,
+                      enableDiscussionVoting: e.target.checked,
+                    }))
+                  }
+                  className="peer sr-only"
+                />
+                <span className="absolute inset-0 rounded-full border border-white/15 bg-white/10 transition-colors peer-checked:bg-[var(--color-action)]/30 peer-checked:border-[var(--color-action)]/50 peer-focus-visible:ring-2 peer-focus-visible:ring-[var(--color-action)]/50" aria-hidden="true" />
+                <span className="absolute left-0.5 top-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform peer-checked:translate-x-5" aria-hidden="true" />
+              </span>
             </label>
-            <label className="text-sm text-[var(--text-secondary)] flex items-center justify-between gap-3">
+
+            <label className="text-sm text-[var(--text-secondary)] flex items-center justify-between gap-3 rounded-lg border border-white/10 bg-white/[0.02] px-3 py-2.5">
               Max answers per player
-              <input
-                type="number"
-                min={1}
-                value={teamBuildingSettings.maxAnswersPerPlayer}
-                onChange={(e) =>
-                  setTeamBuildingSettings((current) => ({
-                    ...current,
-                    maxAnswersPerPlayer: Math.max(1, Number(e.target.value) || 1),
-                  }))
-                }
-                className="w-20 bg-white/5 border border-white/10 rounded-md px-2 py-1 text-sm text-[var(--text-primary)]"
-              />
+              <span className="inline-flex items-center gap-2 rounded-lg border border-white/10 bg-white/5 px-2 py-1">
+                <button
+                  type="button"
+                  onClick={() =>
+                    setTeamBuildingSettings((current) => ({
+                      ...current,
+                      maxAnswersPerPlayer: Math.max(1, current.maxAnswersPerPlayer - 1),
+                    }))
+                  }
+                  className="p-1 rounded-md text-[var(--text-secondary)] hover:text-[var(--color-action)] hover:bg-white/5"
+                  aria-label="Decrease max answers per player"
+                >
+                  <Minus className="w-3.5 h-3.5" />
+                </button>
+                <input
+                  type="number"
+                  min={1}
+                  value={teamBuildingSettings.maxAnswersPerPlayer}
+                  onChange={(e) =>
+                    setTeamBuildingSettings((current) => ({
+                      ...current,
+                      maxAnswersPerPlayer: Math.max(1, Number(e.target.value) || 1),
+                    }))
+                  }
+                  className="w-12 bg-transparent border-0 text-center text-sm text-[var(--text-primary)] [appearance:textfield] focus:outline-none [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+                />
+                <button
+                  type="button"
+                  onClick={() =>
+                    setTeamBuildingSettings((current) => ({
+                      ...current,
+                      maxAnswersPerPlayer: current.maxAnswersPerPlayer + 1,
+                    }))
+                  }
+                  className="p-1 rounded-md text-[var(--text-secondary)] hover:text-[var(--color-action)] hover:bg-white/5"
+                  aria-label="Increase max answers per player"
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                </button>
+              </span>
             </label>
-            <label className="text-sm text-[var(--text-secondary)] flex items-center justify-between gap-3">
+
+            <label className="text-sm text-[var(--text-secondary)] flex items-center justify-between gap-3 rounded-lg border border-white/10 bg-white/[0.02] px-3 py-2.5">
               Max votes per player
-              <input
-                type="number"
-                min={1}
-                value={teamBuildingSettings.maxVotesPerPlayer}
-                onChange={(e) =>
-                  setTeamBuildingSettings((current) => ({
-                    ...current,
-                    maxVotesPerPlayer: Math.max(1, Number(e.target.value) || 1),
-                  }))
-                }
-                className="w-20 bg-white/5 border border-white/10 rounded-md px-2 py-1 text-sm text-[var(--text-primary)]"
-              />
+              <span className="inline-flex items-center gap-2 rounded-lg border border-white/10 bg-white/5 px-2 py-1">
+                <button
+                  type="button"
+                  onClick={() =>
+                    setTeamBuildingSettings((current) => ({
+                      ...current,
+                      maxVotesPerPlayer: Math.max(1, current.maxVotesPerPlayer - 1),
+                    }))
+                  }
+                  className="p-1 rounded-md text-[var(--text-secondary)] hover:text-[var(--color-action)] hover:bg-white/5"
+                  aria-label="Decrease max votes per player"
+                >
+                  <Minus className="w-3.5 h-3.5" />
+                </button>
+                <input
+                  type="number"
+                  min={1}
+                  value={teamBuildingSettings.maxVotesPerPlayer}
+                  onChange={(e) =>
+                    setTeamBuildingSettings((current) => ({
+                      ...current,
+                      maxVotesPerPlayer: Math.max(1, Number(e.target.value) || 1),
+                    }))
+                  }
+                  className="w-12 bg-transparent border-0 text-center text-sm text-[var(--text-primary)] [appearance:textfield] focus:outline-none [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+                />
+                <button
+                  type="button"
+                  onClick={() =>
+                    setTeamBuildingSettings((current) => ({
+                      ...current,
+                      maxVotesPerPlayer: current.maxVotesPerPlayer + 1,
+                    }))
+                  }
+                  className="p-1 rounded-md text-[var(--text-secondary)] hover:text-[var(--color-action)] hover:bg-white/5"
+                  aria-label="Increase max votes per player"
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                </button>
+              </span>
             </label>
-            <label className="text-sm text-[var(--text-secondary)] flex items-center justify-between gap-3 sm:col-span-2">
+
+            <label className="text-sm text-[var(--text-secondary)] flex items-center justify-between gap-3 rounded-lg border border-white/10 bg-white/[0.02] px-3 py-2.5">
               Allow own-answer voting
-              <input
-                type="checkbox"
-                checked={teamBuildingSettings.allowOwnAnswerVoting}
-                onChange={(e) =>
-                  setTeamBuildingSettings((current) => ({
-                    ...current,
-                    allowOwnAnswerVoting: e.target.checked,
-                  }))
-                }
-              />
+              <span className="relative inline-flex h-6 w-11 shrink-0">
+                <input
+                  type="checkbox"
+                  checked={teamBuildingSettings.allowOwnAnswerVoting}
+                  onChange={(e) =>
+                    setTeamBuildingSettings((current) => ({
+                      ...current,
+                      allowOwnAnswerVoting: e.target.checked,
+                    }))
+                  }
+                  className="peer sr-only"
+                />
+                <span className="absolute inset-0 rounded-full border border-white/15 bg-white/10 transition-colors peer-checked:bg-[var(--color-action)]/30 peer-checked:border-[var(--color-action)]/50 peer-focus-visible:ring-2 peer-focus-visible:ring-[var(--color-action)]/50" aria-hidden="true" />
+                <span className="absolute left-0.5 top-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform peer-checked:translate-x-5" aria-hidden="true" />
+              </span>
             </label>
           </div>
         )}

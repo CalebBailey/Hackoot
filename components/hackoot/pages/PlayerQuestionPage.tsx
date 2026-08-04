@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback } from "react";
 import { useSessionStore } from "@/store/sessionStore";
 import { Timer } from "../Timer";
 import { AnswerGrid } from "../AnswerGrid";
+import { Button } from "../Button";
 import { navigate } from "../HackootApp";
 import { PlayerPeer } from "@/transport/peer";
 import { PeerMessage } from "@/types";
@@ -281,13 +282,18 @@ export function PlayerQuestionPage() {
                     return (
                       <label
                         key={choice.id}
-                        className="flex items-center gap-2 text-[var(--text-primary)] bg-white/[0.03] border border-white/10 rounded-lg px-3 py-2"
+                        className={`flex items-center gap-2 text-[var(--text-primary)] rounded-lg px-3 py-2 border transition-colors ${
+                          checked
+                            ? "bg-[var(--color-action)]/15 border-[var(--color-action)]/40"
+                            : "bg-white/[0.03] border-white/10"
+                        } ${locked ? "opacity-60" : "hover:border-[var(--color-action)]/40 cursor-pointer"}`}
                       >
                         <input
                           type="checkbox"
                           checked={checked}
                           onChange={() => toggleSelectOrTextOption(choice.id)}
                           disabled={locked}
+                          className="accent-[var(--color-action)]"
                         />
                         {choice.text}
                       </label>
@@ -316,15 +322,17 @@ export function PlayerQuestionPage() {
                   disabled={locked || textAnswers.length >= maxAnswers}
                   className="flex-1 bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-[var(--text-primary)] placeholder:text-[var(--text-secondary)]/50 focus:outline-none focus:ring-2 focus:ring-[var(--color-action)]/50 focus:border-[var(--color-action)]"
                 />
-                <button
+                <Button
                   type="button"
+                  variant="ghost"
+                  size="sm"
                   onClick={addTextAnswer}
                   disabled={locked || textAnswers.length >= maxAnswers}
-                  className="p-2 rounded-lg border border-white/10 text-[var(--text-secondary)] hover:text-[var(--color-action)] hover:border-[var(--color-action)]/50 disabled:opacity-40"
+                  className="px-2.5 py-2 rounded-lg border border-white/10 text-[var(--text-secondary)] hover:text-[var(--color-action)] hover:border-[var(--color-action)]/50"
                   aria-label="Add answer"
                 >
                   <Plus className="w-4 h-4" />
-                </button>
+                </Button>
               </div>
 
               {textAnswers.length > 0 && (
@@ -335,7 +343,7 @@ export function PlayerQuestionPage() {
                       type="button"
                       onClick={() => removeTextAnswer(index)}
                       disabled={locked}
-                      className="px-2.5 py-1 rounded-full text-sm bg-cyan-500/15 border border-cyan-400/30 text-cyan-100 hover:bg-cyan-500/25"
+                      className="px-2.5 py-1 rounded-full text-sm bg-[var(--color-action)]/15 border border-[var(--color-action)]/30 text-[var(--text-primary)] hover:bg-[var(--color-action)]/25"
                     >
                       {answer}
                     </button>
@@ -343,15 +351,17 @@ export function PlayerQuestionPage() {
                 </div>
               )}
 
-              <button
+              <Button
                 type="button"
+                variant="primary"
+                fullWidth
                 onClick={handleSubmitTextAnswers}
                 disabled={locked || selectedOptionIds.length + textAnswers.length === 0}
-                className="mt-4 w-full inline-flex items-center justify-center gap-2 px-4 py-2 rounded-lg bg-[var(--color-action)] text-white disabled:opacity-50"
+                className="mt-4"
               >
                 <Send className="w-4 h-4" />
                 Submit response
-              </button>
+              </Button>
             </div>
           </div>
         )}

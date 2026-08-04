@@ -135,6 +135,16 @@ export function QuestionEditor({
     });
   };
 
+  const currentMaxAnswers =
+    question.type === "free-text" || question.type === "discussion" || question.type === "select-or-text"
+      ? Math.max(1, Math.floor(question.maxAnswersPerPlayer ?? 3))
+      : 1;
+
+  const currentMaxVotes =
+    question.type === "discussion"
+      ? Math.max(1, Math.floor(question.maxVotesPerPlayer ?? 3))
+      : 1;
+
   const handleImageUrlCommit = () => {
     const trimmed = imageInput.trim();
     if (trimmed === "") {
@@ -420,25 +430,48 @@ export function QuestionEditor({
                   <Plus className="w-3.5 h-3.5" />
                   Add option
                 </button>
-                <label className="flex items-center gap-2 text-xs text-[var(--text-secondary)]">
-                  <input
-                    type="checkbox"
-                    checked={question.allowCustomAnswer ?? true}
-                    onChange={(e) => onChange({ ...question, allowCustomAnswer: e.target.checked })}
-                  />
+                <label className="text-xs text-[var(--text-secondary)] flex items-center justify-between gap-3 rounded-lg border border-white/10 bg-white/[0.02] px-3 py-2">
                   Allow custom answer
+                  <span className="relative inline-flex h-5 w-9 shrink-0">
+                    <input
+                      type="checkbox"
+                      checked={question.allowCustomAnswer ?? true}
+                      onChange={(e) => onChange({ ...question, allowCustomAnswer: e.target.checked })}
+                      className="peer sr-only"
+                    />
+                    <span className="absolute inset-0 rounded-full border border-white/15 bg-white/10 transition-colors peer-checked:bg-[var(--color-action)]/30 peer-checked:border-[var(--color-action)]/50 peer-focus-visible:ring-2 peer-focus-visible:ring-[var(--color-action)]/50" aria-hidden="true" />
+                    <span className="absolute left-0.5 top-0.5 h-4 w-4 rounded-full bg-white shadow transition-transform peer-checked:translate-x-4" aria-hidden="true" />
+                  </span>
                 </label>
               </div>
 
               <div>
                 <label className="block text-xs text-[var(--text-secondary)] mb-1">Max answers per player</label>
-                <input
-                  type="number"
-                  min={1}
-                  value={question.maxAnswersPerPlayer ?? 3}
-                  onChange={(e) => updateMaxAnswers(e.target.value)}
-                  className="w-24 bg-white/5 border border-white/10 rounded-lg px-3 py-1.5 text-sm text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--color-action)]/50 focus:border-[var(--color-action)]"
-                />
+                <div className="inline-flex items-center gap-2 rounded-lg border border-white/10 bg-white/5 px-2 py-1">
+                  <button
+                    type="button"
+                    onClick={() => updateMaxAnswers(String(Math.max(1, currentMaxAnswers - 1)))}
+                    className="p-1 rounded-md text-[var(--text-secondary)] hover:text-[var(--color-action)] hover:bg-white/5"
+                    aria-label="Decrease max answers"
+                  >
+                    <Minus className="w-3.5 h-3.5" />
+                  </button>
+                  <input
+                    type="number"
+                    min={1}
+                    value={currentMaxAnswers}
+                    onChange={(e) => updateMaxAnswers(e.target.value)}
+                    className="w-14 bg-transparent border-0 text-center text-sm text-[var(--text-primary)] [appearance:textfield] focus:outline-none [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => updateMaxAnswers(String(currentMaxAnswers + 1))}
+                    className="p-1 rounded-md text-[var(--text-secondary)] hover:text-[var(--color-action)] hover:bg-white/5"
+                    aria-label="Increase max answers"
+                  >
+                    <Plus className="w-3.5 h-3.5" />
+                  </button>
+                </div>
               </div>
             </div>
           )}
@@ -446,13 +479,31 @@ export function QuestionEditor({
           {question.type === "free-text" && (
             <div>
               <label className="block text-xs text-[var(--text-secondary)] mb-1">Max answers per player</label>
-              <input
-                type="number"
-                min={1}
-                value={question.maxAnswersPerPlayer ?? 3}
-                onChange={(e) => updateMaxAnswers(e.target.value)}
-                className="w-24 bg-white/5 border border-white/10 rounded-lg px-3 py-1.5 text-sm text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--color-action)]/50 focus:border-[var(--color-action)]"
-              />
+              <div className="inline-flex items-center gap-2 rounded-lg border border-white/10 bg-white/5 px-2 py-1">
+                <button
+                  type="button"
+                  onClick={() => updateMaxAnswers(String(Math.max(1, currentMaxAnswers - 1)))}
+                  className="p-1 rounded-md text-[var(--text-secondary)] hover:text-[var(--color-action)] hover:bg-white/5"
+                  aria-label="Decrease max answers"
+                >
+                  <Minus className="w-3.5 h-3.5" />
+                </button>
+                <input
+                  type="number"
+                  min={1}
+                  value={currentMaxAnswers}
+                  onChange={(e) => updateMaxAnswers(e.target.value)}
+                  className="w-14 bg-transparent border-0 text-center text-sm text-[var(--text-primary)] [appearance:textfield] focus:outline-none [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+                />
+                <button
+                  type="button"
+                  onClick={() => updateMaxAnswers(String(currentMaxAnswers + 1))}
+                  className="p-1 rounded-md text-[var(--text-secondary)] hover:text-[var(--color-action)] hover:bg-white/5"
+                  aria-label="Increase max answers"
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                </button>
+              </div>
             </div>
           )}
 
@@ -460,23 +511,59 @@ export function QuestionEditor({
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
                 <label className="block text-xs text-[var(--text-secondary)] mb-1">Max answers per player</label>
-                <input
-                  type="number"
-                  min={1}
-                  value={question.maxAnswersPerPlayer ?? 3}
-                  onChange={(e) => updateMaxAnswers(e.target.value)}
-                  className="w-24 bg-white/5 border border-white/10 rounded-lg px-3 py-1.5 text-sm text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--color-action)]/50 focus:border-[var(--color-action)]"
-                />
+                <div className="inline-flex items-center gap-2 rounded-lg border border-white/10 bg-white/5 px-2 py-1">
+                  <button
+                    type="button"
+                    onClick={() => updateMaxAnswers(String(Math.max(1, currentMaxAnswers - 1)))}
+                    className="p-1 rounded-md text-[var(--text-secondary)] hover:text-[var(--color-action)] hover:bg-white/5"
+                    aria-label="Decrease max answers"
+                  >
+                    <Minus className="w-3.5 h-3.5" />
+                  </button>
+                  <input
+                    type="number"
+                    min={1}
+                    value={currentMaxAnswers}
+                    onChange={(e) => updateMaxAnswers(e.target.value)}
+                    className="w-14 bg-transparent border-0 text-center text-sm text-[var(--text-primary)] [appearance:textfield] focus:outline-none [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => updateMaxAnswers(String(currentMaxAnswers + 1))}
+                    className="p-1 rounded-md text-[var(--text-secondary)] hover:text-[var(--color-action)] hover:bg-white/5"
+                    aria-label="Increase max answers"
+                  >
+                    <Plus className="w-3.5 h-3.5" />
+                  </button>
+                </div>
               </div>
               <div>
                 <label className="block text-xs text-[var(--text-secondary)] mb-1">Max votes per player</label>
-                <input
-                  type="number"
-                  min={1}
-                  value={question.maxVotesPerPlayer ?? 3}
-                  onChange={(e) => updateMaxVotes(e.target.value)}
-                  className="w-24 bg-white/5 border border-white/10 rounded-lg px-3 py-1.5 text-sm text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--color-action)]/50 focus:border-[var(--color-action)]"
-                />
+                <div className="inline-flex items-center gap-2 rounded-lg border border-white/10 bg-white/5 px-2 py-1">
+                  <button
+                    type="button"
+                    onClick={() => updateMaxVotes(String(Math.max(1, currentMaxVotes - 1)))}
+                    className="p-1 rounded-md text-[var(--text-secondary)] hover:text-[var(--color-action)] hover:bg-white/5"
+                    aria-label="Decrease max votes"
+                  >
+                    <Minus className="w-3.5 h-3.5" />
+                  </button>
+                  <input
+                    type="number"
+                    min={1}
+                    value={currentMaxVotes}
+                    onChange={(e) => updateMaxVotes(e.target.value)}
+                    className="w-14 bg-transparent border-0 text-center text-sm text-[var(--text-primary)] [appearance:textfield] focus:outline-none [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => updateMaxVotes(String(currentMaxVotes + 1))}
+                    className="p-1 rounded-md text-[var(--text-secondary)] hover:text-[var(--color-action)] hover:bg-white/5"
+                    aria-label="Increase max votes"
+                  >
+                    <Plus className="w-3.5 h-3.5" />
+                  </button>
+                </div>
               </div>
             </div>
           )}

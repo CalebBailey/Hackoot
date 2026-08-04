@@ -31,7 +31,7 @@ export function QuizCard({ quiz, onEdit, onStart, onDelete }: QuizCardProps) {
           <span
             className={`text-[11px] px-2 py-0.5 rounded-full border shrink-0 ${
               quizType === "team-building"
-                ? "bg-cyan-500/15 border-cyan-400/40 text-cyan-200"
+                ? "bg-[var(--color-action)]/15 border-[var(--color-action)]/35 text-[var(--text-primary)]"
                 : "bg-white/10 border-white/15 text-[var(--text-secondary)]"
             }`}
           >

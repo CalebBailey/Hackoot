@@ -44,13 +44,13 @@ export function DiscussionResultsPanel({
               {topItems.map((item, index) => (
                 <div
                   key={item.id}
-                  className="flex items-center justify-between text-sm rounded-lg border border-cyan-400/25 bg-cyan-500/10 px-3 py-2"
+                  className="flex items-center justify-between text-sm rounded-lg border border-[var(--color-action)]/25 bg-[var(--color-action)]/10 px-3 py-2"
                 >
                   <div className="flex items-center gap-2">
-                    <span className="text-cyan-200/80 w-6">{index + 1}.</span>
+                    <span className="text-[var(--text-primary)]/80 w-6">{index + 1}.</span>
                     <span className="text-[var(--text-primary)]">{item.text}</span>
                   </div>
-                  <span className="text-cyan-200/90">
+                  <span className="text-[var(--text-primary)]/90">
                     {item.voteCount} vote{item.voteCount === 1 ? "" : "s"} ({formatVoteShare(item.voteShare)})
                   </span>
                 </div>

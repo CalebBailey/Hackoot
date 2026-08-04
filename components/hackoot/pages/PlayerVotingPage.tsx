@@ -6,6 +6,7 @@ import { navigate } from "../HackootApp";
 import { PlayerPeer } from "@/transport/peer";
 import { PeerMessage } from "@/types";
 import { Send, Vote } from "lucide-react";
+import { Button } from "../Button";
 
 export function PlayerVotingPage() {
   const participantId = useSessionStore((state) => state.participantId);
@@ -90,20 +91,27 @@ export function PlayerVotingPage() {
   }
 
   return (
-    <div className="container mx-auto px-4 py-8 max-w-2xl">
-      <div className="glass-card p-6">
-        <div className="flex items-center gap-2 mb-2">
-          <Vote className="w-5 h-5 text-[var(--color-action)]" />
-          <h1 className="text-2xl font-heading font-bold text-[var(--text-primary)]">Vote for discussion prompts</h1>
+    <div className="h-screen overflow-hidden flex flex-col px-4 py-4 max-w-2xl mx-auto">
+      <div className="glass-card p-6 mb-4">
+        <div className="flex items-center justify-between gap-3 mb-3">
+          <div className="flex items-center gap-2">
+            <Vote className="w-5 h-5 text-[var(--color-action)]" />
+            <h1 className="text-2xl font-heading font-bold text-[var(--text-primary)]">Vote for discussion prompts</h1>
+          </div>
+          <span className="text-xs px-2 py-1 rounded-full bg-[var(--color-action)]/15 border border-[var(--color-action)]/30 text-[var(--text-primary)]">
+            {selectedAnswerIds.length}/{teamVoteContext.maxVotesPerPlayer}
+          </span>
         </div>
-        <p className="text-[var(--text-secondary)] mb-5">
+        <p className="text-[var(--text-secondary)]">
           Choose up to {teamVoteContext.maxVotesPerPlayer} responses.
         </p>
+      </div>
 
+      <div className="glass-card p-4 flex-1 overflow-hidden flex flex-col">
         {visibleCandidates.length === 0 ? (
           <p className="text-sm text-[var(--text-secondary)]">No eligible answers to vote on.</p>
         ) : (
-          <div className="space-y-2 mb-5">
+          <div className="space-y-2 overflow-y-auto pr-1">
             {visibleCandidates.map((candidate) => {
               const isSelected = selectedAnswerIds.includes(candidate.id);
               return (
@@ -114,9 +122,9 @@ export function PlayerVotingPage() {
                   disabled={submitted}
                   className={`w-full text-left px-3 py-2 rounded-lg border transition-colors ${
                     isSelected
-                      ? "bg-cyan-500/15 border-cyan-400/40 text-cyan-100"
+                      ? "bg-[var(--color-action)]/15 border-[var(--color-action)]/40 text-[var(--text-primary)]"
                       : "bg-white/[0.03] border-white/10 text-[var(--text-primary)] hover:border-[var(--color-action)]/40"
-                  }`}
+                  } ${submitted ? "opacity-70" : ""}`}
                 >
                   {candidate.text}
                 </button>
@@ -124,16 +132,25 @@ export function PlayerVotingPage() {
             })}
           </div>
         )}
+      </div>
 
-        <button
+      <div className="mt-4">
+        <Button
           type="button"
+          variant="primary"
+          size="lg"
+          fullWidth
           onClick={submitVotes}
           disabled={submitted || selectedAnswerIds.length === 0}
-          className="w-full inline-flex items-center justify-center gap-2 px-4 py-2 rounded-lg bg-[var(--color-action)] text-white disabled:opacity-50"
         >
-          <Send className="w-4 h-4" />
+          <Send className="w-4 h-4 mr-2" />
           {submitted ? "Votes submitted" : "Submit votes"}
-        </button>
+        </Button>
+        {submitted && (
+          <p className="text-center text-sm text-[var(--text-secondary)] mt-2">
+            Votes received. Waiting for host.
+          </p>
+        )}
       </div>
     </div>
   );

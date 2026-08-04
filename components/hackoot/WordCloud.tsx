@@ -30,7 +30,7 @@ export function WordCloud({
           {displayTerms.map((term) => (
             <span
               key={term.text}
-              className="px-2 py-1 rounded-full bg-cyan-500/15 border border-cyan-400/30 text-cyan-100"
+              className="px-2 py-1 rounded-full bg-[var(--color-action)]/15 border border-[var(--color-action)]/30 text-[var(--text-primary)]"
               style={{ fontSize: `${Math.min(20, 12 + term.weight * 2)}px` }}
             >
               {term.text}
