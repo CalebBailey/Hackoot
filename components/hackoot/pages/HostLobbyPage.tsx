@@ -110,6 +110,7 @@ export function HostLobbyPage({ quizId }: HostLobbyPageProps) {
                 totalQuestions: quiz?.questions.length ?? 0,
                 questionDuration: sanitizeQuestionTimeLimit(currentQuestion.timeLimit),
                 answeredCurrentQuestion: existingParticipant.answeredCurrentQuestion,
+                discussionIntroParticipantIds: storeSnapshot.discussionIntroParticipantIds,
               }
             : {}),
           ...(updatedSession.state === "team-voting" && storeSnapshot.teamVoteContext
@@ -117,7 +118,7 @@ export function HostLobbyPage({ quizId }: HostLobbyPageProps) {
                 teamVoteContext: storeSnapshot.teamVoteContext,
               }
             : {}),
-          ...(updatedSession.state === "team-results" && storeSnapshot.teamResultsSnapshot
+          ...((updatedSession.state === "team-results" || updatedSession.state === "team-discussion") && storeSnapshot.teamResultsSnapshot
             ? {
                 teamResultsSnapshot: storeSnapshot.teamResultsSnapshot,
               }

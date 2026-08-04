@@ -43,7 +43,8 @@ export function PlayerVotingPage() {
           groupedAnswers: message.groupedAnswers ?? [],
           wordCloud: message.wordCloud ?? [],
           discussionQueue: message.discussionQueue ?? [],
-        });
+        }, message.sessionState ?? "team-results");
+        setSessionState(message.sessionState ?? "team-results");
         navigate("/play/result");
       } else if (message.type === "sessionEnded") {
         updateLeaderboard(message.finalLeaderboard, 0);

@@ -9,7 +9,7 @@ import { PeerMessage, Question } from "@/types";
 import { resolveQuizType } from "@/utils/teamBuilding";
 import { ClusterView } from "../ClusterView";
 import { WordCloud } from "../WordCloud";
-import { DiscussionQueue } from "../DiscussionQueue";
+import { DiscussionResultsPanel } from "../DiscussionResultsPanel";
 
 function toRuntimeQuestion(message: Extract<PeerMessage, { type: "questionStarted" }>): Question {
   if (message.question.type === "mcq") {
@@ -29,8 +29,10 @@ export function PlayerResultPage() {
   const getLeaderboard = useSessionStore((state) => state.getLeaderboard);
   const startQuestion = useSessionStore((state) => state.startQuestion);
   const setCurrentQuestion = useSessionStore((state) => state.setCurrentQuestion);
+  const currentQuestion = useSessionStore((state) => state.currentQuestion);
   const updateLeaderboard = useSessionStore((state) => state.updateLeaderboard);
   const setSessionQuizType = useSessionStore((state) => state.setSessionQuizType);
+  const setSessionState = useSessionStore((state) => state.setSessionState);
   const teamResultsSnapshot = useSessionStore((state) => state.teamResultsSnapshot);
   const setTeamResultsSnapshot = useSessionStore((state) => state.setTeamResultsSnapshot);
 
@@ -74,7 +76,12 @@ export function PlayerResultPage() {
         const runtimeQuestion = toRuntimeQuestion(message);
         setSessionQuizType(runtimeQuestion.type === "mcq" ? "standard" : "team-building");
         setCurrentQuestion(runtimeQuestion);
-        startQuestion(message.questionIndex, runtimeQuestion, message.questionDuration);
+        startQuestion(
+          message.questionIndex,
+          runtimeQuestion,
+          message.questionDuration,
+          message.discussionIntroParticipantIds ?? []
+        );
         navigate("/play/question");
       } else if (message.type === "teamResultsPublished") {
         setTeamResultsSnapshot({
@@ -82,7 +89,8 @@ export function PlayerResultPage() {
           groupedAnswers: message.groupedAnswers ?? [],
           wordCloud: message.wordCloud ?? [],
           discussionQueue: message.discussionQueue ?? [],
-        });
+        }, message.sessionState ?? "team-results");
+        setSessionState(message.sessionState ?? "team-results");
       } else if (message.type === "sessionEnded") {
         updateLeaderboard(message.finalLeaderboard, 0);
         navigate("/play/final");
@@ -92,6 +100,7 @@ export function PlayerResultPage() {
     playerPeer,
     startQuestion,
     setCurrentQuestion,
+    setSessionState,
     setSessionQuizType,
     updateLeaderboard,
     setTeamResultsSnapshot,
@@ -102,6 +111,10 @@ export function PlayerResultPage() {
   const myRank = myEntry?.rank || 0;
   const myScore = myEntry?.score || 0;
   const gotPoints = !isTeamBuilding && lastPointsAwarded > 0;
+  const isDiscussionRound =
+    isTeamBuilding &&
+    currentQuestion?.type === "discussion" &&
+    (session?.state === "team-discussion" || (teamResultsSnapshot?.discussionQueue.length ?? 0) > 0);
   const hasTeamInsights =
     isTeamBuilding &&
     teamResultsSnapshot !== null &&
@@ -125,7 +138,13 @@ export function PlayerResultPage() {
 
         {/* Result text */}
         <h1 className="text-2xl font-heading font-bold text-[var(--text-primary)] mb-2">
-          {isTeamBuilding ? "Response received" : gotPoints ? "Correct!" : "Incorrect"}
+          {isTeamBuilding
+            ? isDiscussionRound
+              ? "Discussion time"
+              : "Response received"
+            : gotPoints
+              ? "Correct!"
+              : "Incorrect"}
         </h1>
 
         {!isTeamBuilding && (
@@ -139,7 +158,9 @@ export function PlayerResultPage() {
 
         {isTeamBuilding && (
           <p className="text-[var(--text-secondary)] mb-8">
-            Thanks for contributing. The host is preparing the next activity.
+            {isDiscussionRound
+              ? "Top-voted answers are ready. Discuss them with your team while the host guides the conversation."
+              : "Thanks for contributing. The host is preparing the next activity."}
           </p>
         )}
 
@@ -166,16 +187,21 @@ export function PlayerResultPage() {
         {/* Waiting indicator */}
         <div className="mt-8 flex items-center justify-center gap-2 text-[var(--text-secondary)]">
           <div className="w-2 h-2 rounded-full bg-current animate-pulse" />
-          <span className="text-sm">Waiting for next question...</span>
+          <span className="text-sm">
+            {isDiscussionRound ? "Discussion in progress - waiting for host" : "Waiting for next question..."}
+          </span>
         </div>
       </div>
 
       {hasTeamInsights && teamResultsSnapshot && (
         <div className="space-y-4 mt-4">
+          {isDiscussionRound ? (
+            <DiscussionResultsPanel items={teamResultsSnapshot.discussionQueue} title="Top selected answers" />
+          ) : null}
           <ClusterView clusters={teamResultsSnapshot.groupedAnswers} title="Current grouped answers" maxItems={6} />
           <WordCloud terms={teamResultsSnapshot.wordCloud} title="Current word cloud" maxItems={16} />
-          {teamResultsSnapshot.discussionQueue.length > 0 ? (
-            <DiscussionQueue items={teamResultsSnapshot.discussionQueue} title="Current discussion queue" maxItems={6} />
+          {!isDiscussionRound && teamResultsSnapshot.discussionQueue.length > 0 ? (
+            <DiscussionResultsPanel items={teamResultsSnapshot.discussionQueue} title="Current discussion queue" />
           ) : null}
         </div>
       )}

@@ -55,7 +55,12 @@ export function PlayerLobbyPage() {
         setSessionQuizType(runtimeQuizType);
         setSessionState(runtimeQuizType === "team-building" ? "team-submission" : "question");
         setCurrentQuestion(runtimeQuestion);
-        startQuestion(message.questionIndex, runtimeQuestion, message.questionDuration);
+        startQuestion(
+          message.questionIndex,
+          runtimeQuestion,
+          message.questionDuration,
+          message.discussionIntroParticipantIds ?? []
+        );
         navigate("/play/question");
       } else if (message.type === "rejoinAck" && message.participantId === participantId) {
         if (message.quizType) {
@@ -69,7 +74,12 @@ export function PlayerLobbyPage() {
           setHasAnsweredCurrentQuestion(message.answeredCurrentQuestion ?? false);
           setCurrentQuestion(runtimeQuestion);
           setSessionState(message.sessionState);
-          startQuestion(message.questionIndex!, runtimeQuestion, message.questionDuration);
+          startQuestion(
+            message.questionIndex!,
+            runtimeQuestion,
+            message.questionDuration,
+            message.discussionIntroParticipantIds ?? []
+          );
           navigate("/play/question");
         } else if (message.sessionState === "team-voting") {
           if (message.teamVoteContext) {
@@ -77,11 +87,11 @@ export function PlayerLobbyPage() {
           }
           setSessionState("team-voting");
           navigate("/play/voting");
-        } else if (message.sessionState === "team-results") {
+        } else if (message.sessionState === "team-results" || message.sessionState === "team-discussion") {
           if (message.teamResultsSnapshot) {
             setTeamResultsSnapshot(message.teamResultsSnapshot);
           }
-          setSessionState("team-results");
+          setSessionState(message.sessionState);
           navigate("/play/result");
         } else if (
           message.sessionState === "reveal" ||

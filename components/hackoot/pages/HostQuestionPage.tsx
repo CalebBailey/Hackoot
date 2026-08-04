@@ -25,6 +25,7 @@ export function HostQuestionPage({ quizId }: HostQuestionPageProps) {
   const recordAnswer = useSessionStore((state) => state.recordAnswer);
   const recordTeamChoiceAnswer = useSessionStore((state) => state.recordTeamChoiceAnswer);
   const recordTeamTextAnswers = useSessionStore((state) => state.recordTeamTextAnswers);
+  const discussionIntroParticipantIds = useSessionStore((state) => state.discussionIntroParticipantIds);
   const setSessionState = useSessionStore((state) => state.setSessionState);
 
   const [timerRunning, setTimerRunning] = useState(false);
@@ -55,14 +56,16 @@ export function HostQuestionPage({ quizId }: HostQuestionPageProps) {
       return;
     }
 
-    startQuestion(currentQuestionIndex, question, questionDuration);
+    const introParticipantIds: string[] = [];
+
+    startQuestion(currentQuestionIndex, question, questionDuration, introParticipantIds);
     questionStartTimeRef.current = Date.now();
     setTimerRunning(true);
     setCanReveal(false);
     setInitialized(true);
 
     // Broadcast question to players (without correct answers)
-    hostPeer.broadcastQuestion(question, currentQuestionIndex, quiz.questions.length);
+    hostPeer.broadcastQuestion(question, currentQuestionIndex, quiz.questions.length, introParticipantIds);
 
     // Handle incoming answers with Kahoot scoring
     hostPeer.onAnswerReceived = (participantId, questionId, choiceId, submittedAt) => {
@@ -120,12 +123,21 @@ export function HostQuestionPage({ quizId }: HostQuestionPageProps) {
   // Check if all players have answered
   useEffect(() => {
     if (!session) return;
-    const allAnswered = session.participants.every((p) => p.answeredCurrentQuestion);
-    if (allAnswered && session.participants.length > 0) {
+    const introParticipants =
+      isTeamBuilding && currentQuestion?.type === "discussion" && discussionIntroParticipantIds.length > 0
+        ? session.participants.filter((participant) => discussionIntroParticipantIds.includes(participant.participantId))
+        : session.participants;
+    const allAnswered = introParticipants.length > 0 && introParticipants.every((participant) => participant.answeredCurrentQuestion);
+    if (allAnswered) {
       setCanReveal(true);
       setTimerRunning(false);
     }
-  }, [session?.participants]);
+  }, [
+    currentQuestion?.type,
+    discussionIntroParticipantIds,
+    isTeamBuilding,
+    session?.participants,
+  ]);
 
   const handleTimerExpire = useCallback(() => {
     setTimerRunning(false);
@@ -149,8 +161,12 @@ export function HostQuestionPage({ quizId }: HostQuestionPageProps) {
     return null;
   }
 
-  const answeredCount = session.participants.filter((p) => p.answeredCurrentQuestion).length;
-  const totalCount = session.participants.length;
+  const introParticipants =
+    isTeamBuilding && currentQuestion.type === "discussion" && discussionIntroParticipantIds.length > 0
+      ? session.participants.filter((participant) => discussionIntroParticipantIds.includes(participant.participantId))
+      : session.participants;
+  const answeredCount = introParticipants.filter((participant) => participant.answeredCurrentQuestion).length;
+  const totalCount = introParticipants.length;
 
   const isDoublePoints = currentQuestion.type === "mcq" ? (currentQuestion.doublePoints ?? false) : false;
   const selectableChoices = getSelectableChoices(currentQuestion);
@@ -209,7 +225,9 @@ export function HostQuestionPage({ quizId }: HostQuestionPageProps) {
           <AnswerGrid choices={selectableChoices} locked={true} />
         ) : (
           <div className="w-full glass-card p-4 text-center text-[var(--text-secondary)] text-sm">
-            Awaiting free-text responses from players
+            {isTeamBuilding && currentQuestion.type === "discussion"
+              ? "Awaiting discussion prompts from players"
+              : "Awaiting free-text responses from players"}
           </div>
         )}
       </div>

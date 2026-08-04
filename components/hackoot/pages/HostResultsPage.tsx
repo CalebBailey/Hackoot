@@ -9,6 +9,7 @@ import { Leaderboard } from "../Leaderboard";
 import { ClusterView } from "../ClusterView";
 import { WordCloud } from "../WordCloud";
 import { DiscussionQueue } from "../DiscussionQueue";
+import { DiscussionResultsPanel } from "../DiscussionResultsPanel";
 import { navigate } from "../HackootApp";
 import { ArrowRight, Trophy, Vote } from "lucide-react";
 import { HostPeer } from "@/transport/peer";
@@ -160,12 +161,13 @@ export function HostResultsPage({ quizId }: HostResultsPageProps) {
         groupedAnswers: resultSnapshot.groupedAnswers,
         wordCloud: resultSnapshot.wordCloud,
         discussionQueue: [],
-      });
+      }, "team-results");
       hostPeer.broadcast({
         type: "teamResultsPublished",
         questionId: currentQuestion.id,
         groupedAnswers: resultSnapshot.groupedAnswers,
         wordCloud: resultSnapshot.wordCloud,
+        sessionState: "team-results",
       });
       setSessionState("team-results");
       setRevealed(true);
@@ -241,7 +243,7 @@ export function HostResultsPage({ quizId }: HostResultsPageProps) {
       groupedAnswers: resultSnapshot.groupedAnswers,
       wordCloud: resultSnapshot.wordCloud,
       discussionQueue,
-    });
+    }, "team-discussion");
 
     hostPeer.broadcast({
       type: "teamVotingClosed",
@@ -253,10 +255,11 @@ export function HostResultsPage({ quizId }: HostResultsPageProps) {
       groupedAnswers: resultSnapshot.groupedAnswers,
       wordCloud: resultSnapshot.wordCloud,
       discussionQueue,
+      sessionState: "team-discussion",
     });
 
     setVotingOpen(false);
-    setSessionState("team-results");
+    setSessionState("team-discussion");
     setRevealed(true);
   };
 
@@ -334,9 +337,15 @@ export function HostResultsPage({ quizId }: HostResultsPageProps) {
 
           {revealed && teamResults && (
             <>
+              {currentQuestion.type === "discussion" ? (
+                <DiscussionResultsPanel
+                  items={session.teamDiscussionQueue?.[currentQuestion.id] ?? []}
+                  title="Discussion round - no timer"
+                />
+              ) : null}
               <ClusterView clusters={teamResults.groupedAnswers} />
               <WordCloud terms={teamResults.wordCloud} />
-              {session.teamDiscussionQueue?.[currentQuestion.id]?.length ? (
+              {currentQuestion.type !== "discussion" && session.teamDiscussionQueue?.[currentQuestion.id]?.length ? (
                 <DiscussionQueue items={session.teamDiscussionQueue[currentQuestion.id]} />
               ) : null}
             </>

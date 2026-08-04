@@ -104,7 +104,12 @@ export class HostPeer {
     return question;
   }
 
-  broadcastQuestion(question: Question, questionIndex: number, totalQuestions: number): void {
+  broadcastQuestion(
+    question: Question,
+    questionIndex: number,
+    totalQuestions: number,
+    discussionIntroParticipantIds: string[] = []
+  ): void {
     this.broadcast({
       type: "questionStarted",
       question: this.toPublicQuestion(question),
@@ -113,6 +118,7 @@ export class HostPeer {
       startedAt: Date.now(),
       doublePoints: question.type === "mcq" ? (question.doublePoints ?? false) : false,
       questionDuration: sanitizeQuestionTimeLimit(question.timeLimit),
+      discussionIntroParticipantIds,
     });
   }
 

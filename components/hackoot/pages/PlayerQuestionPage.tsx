@@ -71,8 +71,8 @@ export function PlayerQuestionPage() {
           groupedAnswers: message.groupedAnswers ?? [],
           wordCloud: message.wordCloud ?? [],
           discussionQueue: message.discussionQueue ?? [],
-        });
-        setSessionState("team-results");
+        }, message.sessionState ?? "team-results");
+        setSessionState(message.sessionState ?? "team-results");
         navigate("/play/result");
       } else if (message.type === "teamSubmissionClosed") {
         setSessionState("team-results");

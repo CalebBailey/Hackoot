@@ -11,6 +11,7 @@ import {
   TeamAnswerCluster,
   WordCloudTerm,
   SessionState,
+  TeamResultSessionState,
 } from "../types";
 import { DEFAULT_QUESTION_TIME_LIMIT, sanitizeQuestionTimeLimit } from "@/utils/scoring";
 
@@ -39,6 +40,7 @@ interface SessionStore {
   lastPointsAwarded: number;
   hasAnsweredCurrentQuestion: boolean;
   currentQuestionDuration: number;
+  discussionIntroParticipantIds: string[];
   teamVoteContext: TeamVoteContext | null;
   teamResultsSnapshot: TeamResultsSnapshot | null;
   
@@ -52,7 +54,12 @@ interface SessionStore {
   addParticipant: (participant: Participant) => void;
   removeParticipant: (participantId: string) => void;
   markParticipantDisconnected: (participantId: string) => void;
-  startQuestion: (questionIndex: number, question: Question, questionDuration?: number) => void;
+  startQuestion: (
+    questionIndex: number,
+    question: Question,
+    questionDuration?: number,
+    discussionIntroParticipantIds?: string[]
+  ) => void;
   setCurrentQuestion: (question: Question | null) => void;
   setSessionState: (state: SessionState) => void;
   recordAnswer: (
@@ -67,7 +74,7 @@ interface SessionStore {
   recordTeamTextAnswers: (participantId: string, questionId: string, answers: string[], submittedAt: number) => void;
   recordTeamVotes: (participantId: string, questionId: string, answerIds: string[], submittedAt: number) => void;
   setTeamVoteContext: (ctx: TeamVoteContext | null) => void;
-  setTeamResultsSnapshot: (snapshot: TeamResultsSnapshot | null) => void;
+  setTeamResultsSnapshot: (snapshot: TeamResultsSnapshot | null, sessionState?: TeamResultSessionState) => void;
   markParticipantAnswered: (participantId: string) => void;
   revealAnswer: () => void;
   updateLeaderboard: (leaderboard: LeaderboardEntry[], pointsAwarded: number) => void;
@@ -88,6 +95,7 @@ export const useSessionStore = create<SessionStore>((set, get) => ({
   lastPointsAwarded: 0,
   hasAnsweredCurrentQuestion: false,
   currentQuestionDuration: DEFAULT_QUESTION_TIME_LIMIT,
+  discussionIntroParticipantIds: [],
   teamVoteContext: null,
   teamResultsSnapshot: null,
 
@@ -109,6 +117,7 @@ export const useSessionStore = create<SessionStore>((set, get) => ({
       },
       activeQuizType: quizType,
       peerError: null,
+      discussionIntroParticipantIds: [],
       teamVoteContext: null,
       teamResultsSnapshot: null,
     });
@@ -180,9 +189,10 @@ export const useSessionStore = create<SessionStore>((set, get) => ({
 
   setHasAnsweredCurrentQuestion: (answered) => set({ hasAnsweredCurrentQuestion: answered }),
 
-  startQuestion: (questionIndex, question, questionDuration) => {
+  startQuestion: (questionIndex, question, questionDuration, discussionIntroParticipantIds = []) => {
     const quizType = get().session?.quizType ?? get().activeQuizType;
     const resolvedDuration = sanitizeQuestionTimeLimit(questionDuration ?? question.timeLimit);
+    const deduplicatedIntroParticipantIds = Array.from(new Set(discussionIntroParticipantIds));
     set((state) => {
       if (!state.session) return state;
       const nextState: SessionState = quizType === "team-building" ? "team-submission" : "question";
@@ -199,6 +209,7 @@ export const useSessionStore = create<SessionStore>((set, get) => ({
         },
         currentQuestion: question,
         currentQuestionDuration: resolvedDuration,
+        discussionIntroParticipantIds: deduplicatedIntroParticipantIds,
         hasAnsweredCurrentQuestion: false,
         teamVoteContext: null,
         teamResultsSnapshot: null,
@@ -316,7 +327,7 @@ export const useSessionStore = create<SessionStore>((set, get) => ({
 
   setTeamVoteContext: (ctx) => set({ teamVoteContext: ctx }),
 
-  setTeamResultsSnapshot: (snapshot) => {
+  setTeamResultsSnapshot: (snapshot, sessionState = "team-results") => {
     set((state) => {
       if (!state.session || !snapshot) {
         return {
@@ -326,7 +337,7 @@ export const useSessionStore = create<SessionStore>((set, get) => ({
       return {
         session: {
           ...state.session,
-          state: "team-results",
+          state: sessionState,
           teamClusters: {
             ...state.session.teamClusters,
             [snapshot.questionId]: snapshot.groupedAnswers,
@@ -424,6 +435,7 @@ export const useSessionStore = create<SessionStore>((set, get) => ({
       lastPointsAwarded: 0,
       hasAnsweredCurrentQuestion: false,
       currentQuestionDuration: DEFAULT_QUESTION_TIME_LIMIT,
+      discussionIntroParticipantIds: [],
       teamVoteContext: null,
       teamResultsSnapshot: null,
     });

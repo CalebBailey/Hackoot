@@ -104,6 +104,8 @@ export type SessionState =
   | "leaderboard"
   | "ended";
 
+export type TeamResultSessionState = "team-results" | "team-discussion";
+
 export interface TeamAnswerCluster {
   id: string;
   canonicalText: string;
@@ -192,6 +194,7 @@ export type PeerMessage =
       startedAt: number;
       doublePoints?: boolean;
       questionDuration: number;
+      discussionIntroParticipantIds?: string[];
     }
   | { type: "answerRevealed"; correctChoiceIds: string[]; leaderboard: LeaderboardEntry[]; playerPoints: Record<string, number> }
   | { type: "teamSubmissionClosed"; questionId: string; submissionCount: number }
@@ -209,6 +212,7 @@ export type PeerMessage =
       groupedAnswers?: TeamAnswerCluster[];
       wordCloud?: WordCloudTerm[];
       discussionQueue?: DiscussionQueueItem[];
+      sessionState?: TeamResultSessionState;
     }
   | { type: "teamDiscussionItemOpened"; questionId: string; item: DiscussionQueueItem }
   | { type: "sessionEnded"; finalLeaderboard: LeaderboardEntry[] }
@@ -224,6 +228,7 @@ export type PeerMessage =
       questionIndex?: number;
       totalQuestions?: number;
       questionDuration?: number;
+      discussionIntroParticipantIds?: string[];
       leaderboard?: LeaderboardEntry[];
       teamVoteContext?: {
         questionId: string;
