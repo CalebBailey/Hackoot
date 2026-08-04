@@ -11,3 +11,4 @@ export { GiphyPicker } from './GiphyPicker';
 export { ClusterView } from './ClusterView';
 export { WordCloud } from './WordCloud';
 export { DiscussionQueue } from './DiscussionQueue';
+export { InterestMatchGraph } from './InterestMatchGraph';

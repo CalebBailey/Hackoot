@@ -114,6 +114,7 @@ export const useSessionStore = create<SessionStore>((set, get) => ({
         teamClusters: {},
         teamWordCloud: {},
         teamDiscussionQueue: {},
+        teamQuestionPrompts: {},
       },
       activeQuizType: quizType,
       peerError: null,
@@ -202,6 +203,10 @@ export const useSessionStore = create<SessionStore>((set, get) => ({
           state: nextState,
           currentQuestionIndex: questionIndex,
           questionStartedAt: Date.now(),
+          teamQuestionPrompts: {
+            ...(state.session.teamQuestionPrompts ?? {}),
+            [question.id]: question.text,
+          },
           participants: state.session.participants.map(p => ({
             ...p,
             answeredCurrentQuestion: false,

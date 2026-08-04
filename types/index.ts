@@ -143,6 +143,7 @@ export interface Session {
   teamClusters?: Record<string, TeamAnswerCluster[]>;
   teamWordCloud?: Record<string, WordCloudTerm[]>;
   teamDiscussionQueue?: Record<string, DiscussionQueueItem[]>;
+  teamQuestionPrompts?: Record<string, string>;
 }
 
 export interface Participant {

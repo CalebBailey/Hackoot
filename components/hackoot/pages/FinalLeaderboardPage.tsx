@@ -8,6 +8,7 @@ import { Trophy, Download, Home, Medal } from "lucide-react";
 import { exportSessionResults } from "@/utils/quizStorage";
 import { clearPlayerSession } from "@/utils/playerSession";
 import { resolveQuizType } from "@/utils/teamBuilding";
+import { InterestMatchGraph } from "../InterestMatchGraph";
 
 // Delays (ms) for each place to begin animating - 3rd first, 2nd second, 1st last
 const PODIUM_DELAYS = { third: 0, second: 700, first: 1400 };
@@ -55,6 +56,7 @@ export function FinalLeaderboardPage() {
         teamClusters: session.teamClusters,
         teamWordCloud: session.teamWordCloud,
         teamDiscussionQueue: session.teamDiscussionQueue,
+        teamQuestionPrompts: session.teamQuestionPrompts,
         endedAt: new Date().toISOString(),
       },
       session.quizId || "hackoot-results"
@@ -113,6 +115,19 @@ export function FinalLeaderboardPage() {
                   {participant.name}
                 </div>
               ))}
+            </div>
+          ) : null}
+
+          {session?.participants.length ? (
+            <div className="mt-6">
+              <InterestMatchGraph
+                participants={session.participants}
+                clustersByQuestion={session.teamClusters}
+                questionPrompts={session.teamQuestionPrompts}
+                currentParticipantId={participantId}
+                title="People you matched with"
+                maxVisibleMatches={6}
+              />
             </div>
           ) : null}
         </div>
