@@ -97,7 +97,7 @@ export function PlayerVotingPage() {
   const reachedVoteLimit = selectedAnswerIds.length >= teamVoteContext.maxVotesPerPlayer;
 
   return (
-    <div className="h-screen overflow-hidden flex flex-col px-4 py-4 max-w-2xl mx-auto">
+    <div className="min-h-screen overflow-y-auto flex flex-col px-4 py-4 max-w-2xl mx-auto">
       <div className="glass-card p-6 mb-4">
         <div className="flex items-center justify-between gap-3 mb-3">
           <div className="flex items-center gap-2">

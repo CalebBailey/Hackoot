@@ -123,7 +123,11 @@ export function PlayerResultPage() {
       teamResultsSnapshot.discussionQueue.length > 0);
 
   return (
-    <div className={`container mx-auto px-4 py-8 min-h-screen flex flex-col justify-center ${isTeamBuilding ? "max-w-2xl" : "max-w-md"}`}>
+    <div
+      className={`container mx-auto px-4 py-8 min-h-screen overflow-y-auto flex flex-col ${
+        isTeamBuilding ? "max-w-2xl justify-start" : "max-w-md justify-center"
+      }`}
+    >
       <div className="glass-card p-6 sm:p-8 text-center">
         {/* Result icon */}
         <div className="mb-6">

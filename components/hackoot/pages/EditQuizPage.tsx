@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { useQuizStore } from "@/store/quizStore";
 import { Button } from "../Button";
+import { Checkbox } from "@/components/ui/checkbox";
 import { QuestionEditor } from "../QuestionEditor";
 import { navigate } from "../HackootApp";
 import { ArrowLeft, Plus, Minus, Save, Download, AlertCircle } from "lucide-react";
@@ -292,47 +293,45 @@ export function EditQuizPage({ quizId }: EditQuizPageProps) {
         </div>
 
         {quizType === "team-building" && (
-          <div className="space-y-3 p-3 rounded-lg bg-white/[0.03] border border-white/10">
-            <p className="text-xs uppercase tracking-wide text-[var(--text-secondary)]/80">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 p-3 rounded-lg bg-white/[0.03] border border-white/10">
+            <p className="text-xs uppercase tracking-wide text-[var(--text-secondary)]/80 sm:col-span-2">
               Team Building settings
             </p>
 
-            <label className="text-sm text-[var(--text-secondary)] flex items-center justify-between gap-3 rounded-lg border border-white/10 bg-white/[0.02] px-3 py-2.5">
+            <label
+              htmlFor="team-setting-word-cloud"
+              className="text-sm text-[var(--text-secondary)] flex items-center justify-between gap-3 rounded-lg border border-white/10 bg-white/[0.02] px-3 py-2.5 cursor-pointer"
+            >
               Enable word cloud
-              <span className="relative inline-flex h-6 w-11 shrink-0">
-                <input
-                  type="checkbox"
-                  checked={teamBuildingSettings.enableWordCloud}
-                  onChange={(e) =>
-                    setTeamBuildingSettings((current) => ({
-                      ...current,
-                      enableWordCloud: e.target.checked,
-                    }))
-                  }
-                  className="peer sr-only"
-                />
-                <span className="absolute inset-0 rounded-full border border-white/15 bg-white/10 transition-colors peer-checked:bg-[var(--color-action)]/30 peer-checked:border-[var(--color-action)]/50 peer-focus-visible:ring-2 peer-focus-visible:ring-[var(--color-action)]/50" aria-hidden="true" />
-                <span className="absolute left-0.5 top-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform peer-checked:translate-x-5" aria-hidden="true" />
-              </span>
+              <Checkbox
+                id="team-setting-word-cloud"
+                checked={teamBuildingSettings.enableWordCloud}
+                onCheckedChange={(checked) =>
+                  setTeamBuildingSettings((current) => ({
+                    ...current,
+                    enableWordCloud: checked === true,
+                  }))
+                }
+                className="size-5 border-white/30 data-[state=checked]:bg-[var(--color-action)] data-[state=checked]:border-[var(--color-action)] data-[state=checked]:text-white"
+              />
             </label>
 
-            <label className="text-sm text-[var(--text-secondary)] flex items-center justify-between gap-3 rounded-lg border border-white/10 bg-white/[0.02] px-3 py-2.5">
+            <label
+              htmlFor="team-setting-discussion-voting"
+              className="text-sm text-[var(--text-secondary)] flex items-center justify-between gap-3 rounded-lg border border-white/10 bg-white/[0.02] px-3 py-2.5 cursor-pointer"
+            >
               Enable discussion voting
-              <span className="relative inline-flex h-6 w-11 shrink-0">
-                <input
-                  type="checkbox"
-                  checked={teamBuildingSettings.enableDiscussionVoting}
-                  onChange={(e) =>
-                    setTeamBuildingSettings((current) => ({
-                      ...current,
-                      enableDiscussionVoting: e.target.checked,
-                    }))
-                  }
-                  className="peer sr-only"
-                />
-                <span className="absolute inset-0 rounded-full border border-white/15 bg-white/10 transition-colors peer-checked:bg-[var(--color-action)]/30 peer-checked:border-[var(--color-action)]/50 peer-focus-visible:ring-2 peer-focus-visible:ring-[var(--color-action)]/50" aria-hidden="true" />
-                <span className="absolute left-0.5 top-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform peer-checked:translate-x-5" aria-hidden="true" />
-              </span>
+              <Checkbox
+                id="team-setting-discussion-voting"
+                checked={teamBuildingSettings.enableDiscussionVoting}
+                onCheckedChange={(checked) =>
+                  setTeamBuildingSettings((current) => ({
+                    ...current,
+                    enableDiscussionVoting: checked === true,
+                  }))
+                }
+                className="size-5 border-white/30 data-[state=checked]:bg-[var(--color-action)] data-[state=checked]:border-[var(--color-action)] data-[state=checked]:text-white"
+              />
             </label>
 
             <label className="text-sm text-[var(--text-secondary)] flex items-center justify-between gap-3 rounded-lg border border-white/10 bg-white/[0.02] px-3 py-2.5">
@@ -423,23 +422,22 @@ export function EditQuizPage({ quizId }: EditQuizPageProps) {
               </span>
             </label>
 
-            <label className="text-sm text-[var(--text-secondary)] flex items-center justify-between gap-3 rounded-lg border border-white/10 bg-white/[0.02] px-3 py-2.5">
+            <label
+              htmlFor="team-setting-own-vote"
+              className="text-sm text-[var(--text-secondary)] flex items-center justify-between gap-3 rounded-lg border border-white/10 bg-white/[0.02] px-3 py-2.5 cursor-pointer"
+            >
               Allow own-answer voting
-              <span className="relative inline-flex h-6 w-11 shrink-0">
-                <input
-                  type="checkbox"
-                  checked={teamBuildingSettings.allowOwnAnswerVoting}
-                  onChange={(e) =>
-                    setTeamBuildingSettings((current) => ({
-                      ...current,
-                      allowOwnAnswerVoting: e.target.checked,
-                    }))
-                  }
-                  className="peer sr-only"
-                />
-                <span className="absolute inset-0 rounded-full border border-white/15 bg-white/10 transition-colors peer-checked:bg-[var(--color-action)]/30 peer-checked:border-[var(--color-action)]/50 peer-focus-visible:ring-2 peer-focus-visible:ring-[var(--color-action)]/50" aria-hidden="true" />
-                <span className="absolute left-0.5 top-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform peer-checked:translate-x-5" aria-hidden="true" />
-              </span>
+              <Checkbox
+                id="team-setting-own-vote"
+                checked={teamBuildingSettings.allowOwnAnswerVoting}
+                onCheckedChange={(checked) =>
+                  setTeamBuildingSettings((current) => ({
+                    ...current,
+                    allowOwnAnswerVoting: checked === true,
+                  }))
+                }
+                className="size-5 border-white/30 data-[state=checked]:bg-[var(--color-action)] data-[state=checked]:border-[var(--color-action)] data-[state=checked]:text-white"
+              />
             </label>
           </div>
         )}

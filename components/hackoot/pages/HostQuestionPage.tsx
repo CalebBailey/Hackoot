@@ -172,7 +172,11 @@ export function HostQuestionPage({ quizId }: HostQuestionPageProps) {
   const selectableChoices = getSelectableChoices(currentQuestion);
 
   return (
-    <div className="h-screen overflow-hidden flex flex-col px-4 py-3 max-w-3xl mx-auto">
+    <div
+      className={`flex flex-col px-4 py-3 max-w-3xl mx-auto ${
+        isTeamBuilding ? "min-h-screen overflow-y-auto" : "h-screen overflow-hidden"
+      }`}
+    >
       {isDoublePoints && <div className="double-points-vignette" aria-hidden="true" />}
 
       {/* Header - CSS grid keeps timer pixel-perfect centred */}

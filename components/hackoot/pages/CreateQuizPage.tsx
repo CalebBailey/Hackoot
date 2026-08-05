@@ -3,9 +3,10 @@
 import { useState } from "react";
 import { useQuizStore } from "@/store/quizStore";
 import { Button } from "../Button";
+import { Checkbox } from "@/components/ui/checkbox";
 import { QuestionEditor } from "../QuestionEditor";
 import { navigate } from "../HackootApp";
-import { ArrowLeft, Plus, Save, AlertCircle } from "lucide-react";
+import { ArrowLeft, Plus, Minus, Save, AlertCircle } from "lucide-react";
 import { Choice, Quiz, Question, QuizType, TeamBuildingQuizSettings } from "@/types";
 import { generateUUID } from "@/lib/utils";
 import { DEFAULT_QUESTION_TIME_LIMIT, sanitizeQuestionTimeLimit } from "@/utils/scoring";
@@ -230,73 +231,145 @@ export function CreateQuizPage() {
 
         {quizType === "team-building" && (
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 p-3 rounded-lg bg-white/[0.03] border border-white/10">
-            <label className="text-sm text-[var(--text-secondary)] flex items-center justify-between gap-3">
+            <p className="text-xs uppercase tracking-wide text-[var(--text-secondary)]/80 sm:col-span-2">
+              Team Building settings
+            </p>
+
+            <label
+              htmlFor="create-team-setting-word-cloud"
+              className="text-sm text-[var(--text-secondary)] flex items-center justify-between gap-3 rounded-lg border border-white/10 bg-white/[0.02] px-3 py-2.5 cursor-pointer"
+            >
               Enable word cloud
-              <input
-                type="checkbox"
+              <Checkbox
+                id="create-team-setting-word-cloud"
                 checked={teamBuildingSettings.enableWordCloud}
-                onChange={(e) =>
+                onCheckedChange={(checked) =>
                   setTeamBuildingSettings((current) => ({
                     ...current,
-                    enableWordCloud: e.target.checked,
+                    enableWordCloud: checked === true,
                   }))
                 }
+                className="size-5 border-white/30 data-[state=checked]:bg-[var(--color-action)] data-[state=checked]:border-[var(--color-action)] data-[state=checked]:text-white"
               />
             </label>
-            <label className="text-sm text-[var(--text-secondary)] flex items-center justify-between gap-3">
+            <label
+              htmlFor="create-team-setting-discussion-voting"
+              className="text-sm text-[var(--text-secondary)] flex items-center justify-between gap-3 rounded-lg border border-white/10 bg-white/[0.02] px-3 py-2.5 cursor-pointer"
+            >
               Enable discussion voting
-              <input
-                type="checkbox"
+              <Checkbox
+                id="create-team-setting-discussion-voting"
                 checked={teamBuildingSettings.enableDiscussionVoting}
-                onChange={(e) =>
+                onCheckedChange={(checked) =>
                   setTeamBuildingSettings((current) => ({
                     ...current,
-                    enableDiscussionVoting: e.target.checked,
+                    enableDiscussionVoting: checked === true,
                   }))
                 }
+                className="size-5 border-white/30 data-[state=checked]:bg-[var(--color-action)] data-[state=checked]:border-[var(--color-action)] data-[state=checked]:text-white"
               />
             </label>
-            <label className="text-sm text-[var(--text-secondary)] flex items-center justify-between gap-3">
+            <label className="text-sm text-[var(--text-secondary)] flex items-center justify-between gap-3 rounded-lg border border-white/10 bg-white/[0.02] px-3 py-2.5">
               Max answers per player
-              <input
-                type="number"
-                min={1}
-                value={teamBuildingSettings.maxAnswersPerPlayer}
-                onChange={(e) =>
-                  setTeamBuildingSettings((current) => ({
-                    ...current,
-                    maxAnswersPerPlayer: Math.max(1, Number(e.target.value) || 1),
-                  }))
-                }
-                className="w-20 bg-white/5 border border-white/10 rounded-md px-2 py-1 text-sm text-[var(--text-primary)]"
-              />
+              <span className="inline-flex items-center gap-2 rounded-lg border border-white/10 bg-white/5 px-2 py-1">
+                <button
+                  type="button"
+                  onClick={() =>
+                    setTeamBuildingSettings((current) => ({
+                      ...current,
+                      maxAnswersPerPlayer: Math.max(1, current.maxAnswersPerPlayer - 1),
+                    }))
+                  }
+                  className="p-1 rounded-md text-[var(--text-secondary)] hover:text-[var(--color-action)] hover:bg-white/5"
+                  aria-label="Decrease max answers per player"
+                >
+                  <Minus className="w-3.5 h-3.5" />
+                </button>
+                <input
+                  type="number"
+                  min={1}
+                  value={teamBuildingSettings.maxAnswersPerPlayer}
+                  onChange={(e) =>
+                    setTeamBuildingSettings((current) => ({
+                      ...current,
+                      maxAnswersPerPlayer: Math.max(1, Number(e.target.value) || 1),
+                    }))
+                  }
+                  className="w-12 bg-transparent border-0 text-center text-sm text-[var(--text-primary)] [appearance:textfield] focus:outline-none [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+                />
+                <button
+                  type="button"
+                  onClick={() =>
+                    setTeamBuildingSettings((current) => ({
+                      ...current,
+                      maxAnswersPerPlayer: current.maxAnswersPerPlayer + 1,
+                    }))
+                  }
+                  className="p-1 rounded-md text-[var(--text-secondary)] hover:text-[var(--color-action)] hover:bg-white/5"
+                  aria-label="Increase max answers per player"
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                </button>
+              </span>
             </label>
-            <label className="text-sm text-[var(--text-secondary)] flex items-center justify-between gap-3">
+            <label className="text-sm text-[var(--text-secondary)] flex items-center justify-between gap-3 rounded-lg border border-white/10 bg-white/[0.02] px-3 py-2.5">
               Max votes per player
-              <input
-                type="number"
-                min={1}
-                value={teamBuildingSettings.maxVotesPerPlayer}
-                onChange={(e) =>
-                  setTeamBuildingSettings((current) => ({
-                    ...current,
-                    maxVotesPerPlayer: Math.max(1, Number(e.target.value) || 1),
-                  }))
-                }
-                className="w-20 bg-white/5 border border-white/10 rounded-md px-2 py-1 text-sm text-[var(--text-primary)]"
-              />
+              <span className="inline-flex items-center gap-2 rounded-lg border border-white/10 bg-white/5 px-2 py-1">
+                <button
+                  type="button"
+                  onClick={() =>
+                    setTeamBuildingSettings((current) => ({
+                      ...current,
+                      maxVotesPerPlayer: Math.max(1, current.maxVotesPerPlayer - 1),
+                    }))
+                  }
+                  className="p-1 rounded-md text-[var(--text-secondary)] hover:text-[var(--color-action)] hover:bg-white/5"
+                  aria-label="Decrease max votes per player"
+                >
+                  <Minus className="w-3.5 h-3.5" />
+                </button>
+                <input
+                  type="number"
+                  min={1}
+                  value={teamBuildingSettings.maxVotesPerPlayer}
+                  onChange={(e) =>
+                    setTeamBuildingSettings((current) => ({
+                      ...current,
+                      maxVotesPerPlayer: Math.max(1, Number(e.target.value) || 1),
+                    }))
+                  }
+                  className="w-12 bg-transparent border-0 text-center text-sm text-[var(--text-primary)] [appearance:textfield] focus:outline-none [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+                />
+                <button
+                  type="button"
+                  onClick={() =>
+                    setTeamBuildingSettings((current) => ({
+                      ...current,
+                      maxVotesPerPlayer: current.maxVotesPerPlayer + 1,
+                    }))
+                  }
+                  className="p-1 rounded-md text-[var(--text-secondary)] hover:text-[var(--color-action)] hover:bg-white/5"
+                  aria-label="Increase max votes per player"
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                </button>
+              </span>
             </label>
-            <label className="text-sm text-[var(--text-secondary)] flex items-center justify-between gap-3 sm:col-span-2">
+            <label
+              htmlFor="create-team-setting-own-vote"
+              className="text-sm text-[var(--text-secondary)] flex items-center justify-between gap-3 rounded-lg border border-white/10 bg-white/[0.02] px-3 py-2.5 cursor-pointer"
+            >
               Allow own-answer voting
-              <input
-                type="checkbox"
+              <Checkbox
+                id="create-team-setting-own-vote"
                 checked={teamBuildingSettings.allowOwnAnswerVoting}
-                onChange={(e) =>
+                onCheckedChange={(checked) =>
                   setTeamBuildingSettings((current) => ({
                     ...current,
-                    allowOwnAnswerVoting: e.target.checked,
+                    allowOwnAnswerVoting: checked === true,
                   }))
                 }
+                className="size-5 border-white/30 data-[state=checked]:bg-[var(--color-action)] data-[state=checked]:border-[var(--color-action)] data-[state=checked]:text-white"
               />
             </label>
           </div>
