@@ -24,9 +24,54 @@ const DEFAULT_STOP_WORDS = new Set([
   "from",
 ]);
 
+const TOKEN_MATCH_REGEX = /[\p{L}\p{N}][\p{L}\p{N}'+#-]*/gu;
+
 export interface BuildWordCloudOptions extends NormaliseOptions {
   topN?: number;
   stopWords?: string[];
+}
+
+function getCustomSynonyms(options: BuildWordCloudOptions): Record<string, string> {
+  return Object.fromEntries(
+    Object.entries(options.synonyms ?? {}).map(([key, value]) => [
+      key.toLowerCase().trim(),
+      value.toLowerCase().trim(),
+    ])
+  );
+}
+
+function extractTokens(answer: string, options: BuildWordCloudOptions): string[] {
+  const compact = answer.trim().toLowerCase().replace(/\s+/g, " ");
+  if (!compact) {
+    return [];
+  }
+
+  const rawTokens = compact.match(TOKEN_MATCH_REGEX) ?? compact.split(" ");
+  const customSynonyms = getCustomSynonyms(options);
+  const tokens: string[] = [];
+
+  for (const rawToken of rawTokens) {
+    const cleaned = rawToken.trim();
+    if (!cleaned) {
+      continue;
+    }
+
+    const mappedByCustomSynonym = customSynonyms[cleaned];
+    const canonicalToken = mappedByCustomSynonym
+      ? mappedByCustomSynonym
+      : /^[\p{L}\p{N}]+$/u.test(cleaned)
+        ? normaliseAnswer(cleaned, options)
+        : cleaned;
+
+    const expandedTokens = canonicalToken
+      .split(" ")
+      .map((token) => token.trim().toLowerCase())
+      .filter(Boolean);
+
+    tokens.push(...expandedTokens);
+  }
+
+  return tokens;
 }
 
 export function buildWordCloud(answers: string[], options: BuildWordCloudOptions = {}): WordCloudTerm[] {
@@ -36,18 +81,16 @@ export function buildWordCloud(answers: string[], options: BuildWordCloudOptions
   const counts = new Map<string, number>();
 
   for (const answer of answers) {
-    const normalised = normaliseAnswer(answer, options);
-    if (!normalised) {
+    const tokens = extractTokens(answer, options);
+    if (tokens.length === 0) {
       continue;
     }
 
-    const tokens = normalised.split(" ");
-    for (const token of tokens) {
-      const cleaned = token.trim();
-      if (!cleaned || stopWords.has(cleaned)) {
-        continue;
-      }
-      counts.set(cleaned, (counts.get(cleaned) ?? 0) + 1);
+    const nonStopTokens = tokens.filter((token) => !stopWords.has(token));
+    const tokensToCount = nonStopTokens.length > 0 ? nonStopTokens : tokens;
+
+    for (const token of tokensToCount) {
+      counts.set(token, (counts.get(token) ?? 0) + 1);
     }
   }
 
