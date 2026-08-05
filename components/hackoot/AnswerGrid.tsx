@@ -20,7 +20,13 @@ const COLORS = [
   { bg: "bg-[#3B82F6]", name: "blue" },    // D - bottom-right
 ];
 
-const LABELS = ["A", "B", "C", "D"];
+function getChoiceLabel(index: number): string {
+  if (index >= 0 && index < 26) {
+    return String.fromCharCode(65 + index);
+  }
+
+  return `${index + 1}`;
+}
 
 export function AnswerGrid({
   choices,
@@ -41,7 +47,8 @@ export function AnswerGrid({
       {choices.map((choice, index) => {
         const isSelected = selectedId === choice.id;
         const isCorrect = revealedCorrectIds?.includes(choice.id);
-        const color = COLORS[index] || COLORS[0];
+        const color = COLORS[index % COLORS.length];
+        const choiceLabel = getChoiceLabel(index);
 
         return (
           <button
@@ -58,10 +65,10 @@ export function AnswerGrid({
               isRevealed && !isCorrect && "opacity-60"
             )}
             aria-pressed={isSelected}
-            aria-label={showChoiceText ? `Answer ${LABELS[index]}: ${choice.text}` : `Answer ${LABELS[index]}`}
+            aria-label={showChoiceText ? `Answer ${choiceLabel}: ${choice.text}` : `Answer ${choiceLabel}`}
           >
             <span className="absolute top-2 left-3 text-sm font-bold opacity-70">
-              {LABELS[index]}
+              {choiceLabel}
             </span>
             {showChoiceText ? <span className="block mt-2">{choice.text}</span> : null}
             

@@ -13,35 +13,11 @@ import { Plus, Send, Zap } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { getSelectableChoices, normaliseAnswer, resolveQuizType } from "@/utils/teamBuilding";
 
-const OPTION_PALETTES = [
-  {
-    baseBg: "bg-[#10B981]/10",
-    baseBorder: "border-[#10B981]/35",
-    activeBg: "bg-[#10B981]/22",
-    activeBorder: "border-[#10B981]/65",
-    badge: "bg-[#10B981]",
-  },
-  {
-    baseBg: "bg-[#F59E0B]/10",
-    baseBorder: "border-[#F59E0B]/35",
-    activeBg: "bg-[#F59E0B]/22",
-    activeBorder: "border-[#F59E0B]/65",
-    badge: "bg-[#F59E0B]",
-  },
-  {
-    baseBg: "bg-[#F43F5E]/10",
-    baseBorder: "border-[#F43F5E]/35",
-    activeBg: "bg-[#F43F5E]/22",
-    activeBorder: "border-[#F43F5E]/65",
-    badge: "bg-[#F43F5E]",
-  },
-  {
-    baseBg: "bg-[#3B82F6]/10",
-    baseBorder: "border-[#3B82F6]/35",
-    activeBg: "bg-[#3B82F6]/22",
-    activeBorder: "border-[#3B82F6]/65",
-    badge: "bg-[#3B82F6]",
-  },
+const STANDARD_OPTION_BASE_COLOURS = [
+  { rgb: "16, 185, 129", badge: "#10B981" },
+  { rgb: "245, 158, 11", badge: "#F59E0B" },
+  { rgb: "244, 63, 94", badge: "#F43F5E" },
+  { rgb: "59, 130, 246", badge: "#3B82F6" },
 ];
 
 function getOptionLabel(index: number): string {
@@ -53,7 +29,32 @@ function getOptionLabel(index: number): string {
 }
 
 function getOptionPalette(index: number) {
-  return OPTION_PALETTES[index % OPTION_PALETTES.length];
+  const colour = STANDARD_OPTION_BASE_COLOURS[index % STANDARD_OPTION_BASE_COLOURS.length];
+  const cycleIndex = Math.floor(index / STANDARD_OPTION_BASE_COLOURS.length);
+  const baseAlphaBoost = Math.min(cycleIndex * 0.03, 0.12);
+  const activeAlphaBoost = Math.min(cycleIndex * 0.05, 0.16);
+
+  return {
+    baseRowStyle: {
+      backgroundColor: `rgba(${colour.rgb}, ${0.10 + baseAlphaBoost})`,
+      borderColor: `rgba(${colour.rgb}, ${0.36 + baseAlphaBoost})`,
+    },
+    activeRowStyle: {
+      backgroundColor: `rgba(${colour.rgb}, ${0.22 + activeAlphaBoost})`,
+      borderColor: `rgba(${colour.rgb}, ${0.70 + activeAlphaBoost * 0.5})`,
+    },
+    badgeStyle: {
+      backgroundColor: colour.badge,
+    },
+  };
+}
+
+function getOptionColumnCount(optionCount: number): number {
+  if (optionCount <= 4) {
+    return 1;
+  }
+
+  return Math.floor((optionCount - 5) / 6) + 2;
 }
 
 function deduplicateAnswers(values: string[]): string[] {
@@ -291,9 +292,16 @@ export function PlayerQuestionPage() {
   const totalDraftAnswers = selectedOptionIds.length + textAnswers.length;
   const remainingAnswers = Math.max(0, maxAnswers - totalDraftAnswers);
   const reachedMaxAnswers = totalDraftAnswers >= maxAnswers;
+  const hasUnstagedDraft = textInput.trim().length > 0;
+  const stagedSelectOrTextOptions =
+    currentQuestion.type === "select-or-text"
+      ? selectableChoices
+          .map((choice, index) => ({ id: choice.id, label: getOptionLabel(index) }))
+          .filter((choice) => selectedOptionIds.includes(choice.id))
+      : [];
 
   return (
-    <div className="h-screen overflow-hidden flex flex-col px-4 py-4 max-w-2xl mx-auto">
+    <div className="h-screen overflow-y-auto flex flex-col px-4 py-4 max-w-2xl mx-auto">
       {isDoublePoints && <div className="double-points-vignette" aria-hidden="true" />}
 
       {/* Points info / double points badge */}
@@ -342,7 +350,7 @@ export function PlayerQuestionPage() {
       </div>
 
       {/* Answer Grid */}
-      <div className="flex-1 flex items-center justify-center">
+      <div className={`flex-1 flex ${isTextSubmissionQuestion ? "items-start" : "items-center"} justify-center`}>
         {!isTextSubmissionQuestion ? (
           <AnswerGrid
             choices={selectableChoices}
@@ -361,7 +369,12 @@ export function PlayerQuestionPage() {
                     {totalDraftAnswers}/{maxAnswers}
                   </span>
                 </div>
-                <div className="space-y-2">
+                <div
+                  className="grid gap-2 max-h-[42vh] overflow-y-auto pr-1"
+                  style={{
+                    gridTemplateColumns: `repeat(${getOptionColumnCount(selectableChoices.length)}, minmax(0, 1fr))`,
+                  }}
+                >
                   {selectableChoices.map((choice, index) => {
                     const checked = selectedOptionIds.includes(choice.id);
                     const disableUnchecked = !checked && reachedMaxAnswers;
@@ -374,10 +387,9 @@ export function PlayerQuestionPage() {
                         key={choice.id}
                         htmlFor={`choice-${choice.id}`}
                         className={`flex items-center gap-3 text-[var(--text-primary)] rounded-lg px-3 py-2.5 border transition-colors ${
-                          checked
-                            ? `${optionPalette.activeBg} ${optionPalette.activeBorder}`
-                            : `${optionPalette.baseBg} ${optionPalette.baseBorder}`
+                          checked ? "shadow-[0_0_0_1px_rgba(255,255,255,0.12)_inset]" : ""
                         } ${disabled ? "opacity-60" : "hover:opacity-95 cursor-pointer"}`}
+                        style={checked ? optionPalette.activeRowStyle : optionPalette.baseRowStyle}
                       >
                         <Checkbox
                           id={`choice-${choice.id}`}
@@ -388,7 +400,8 @@ export function PlayerQuestionPage() {
                           className="size-5 border-white/30 data-[state=checked]:bg-[var(--color-action)] data-[state=checked]:border-[var(--color-action)] data-[state=checked]:text-white"
                         />
                         <span
-                          className={`inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-xs font-bold text-white ${optionPalette.badge}`}
+                          className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-xs font-bold text-white"
+                          style={optionPalette.badgeStyle}
                           aria-hidden="true"
                         >
                           {optionLabel}
@@ -413,7 +426,7 @@ export function PlayerQuestionPage() {
                 Add up to {maxAnswers} answer{maxAnswers !== 1 ? "s" : ""}
                 {!locked ? ` - ${remainingAnswers} remaining` : ""}
               </p>
-              <div className="flex items-center gap-2">
+              <div className="space-y-2">
                 <input
                   type="text"
                   value={textInput}
@@ -426,46 +439,82 @@ export function PlayerQuestionPage() {
                   }}
                   placeholder="Type your answer"
                   disabled={locked || remainingAnswers === 0}
-                  className="flex-1 bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-[var(--text-primary)] placeholder:text-[var(--text-secondary)]/50 focus:outline-none focus:ring-2 focus:ring-[var(--color-action)]/50 focus:border-[var(--color-action)]"
+                  className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-[var(--text-primary)] placeholder:text-[var(--text-secondary)]/50 focus:outline-none focus:ring-2 focus:ring-[var(--color-action)]/50 focus:border-[var(--color-action)]"
                 />
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  onClick={addTextAnswer}
-                  disabled={locked || remainingAnswers === 0 || !textInput.trim()}
-                  className="px-2.5 py-2 rounded-lg border border-white/10 text-[var(--text-secondary)] hover:text-[var(--color-action)] hover:border-[var(--color-action)]/50"
-                  aria-label="Add answer"
-                >
-                  <Plus className="w-4 h-4" />
-                </Button>
+                {!locked && (
+                  <p className="text-xs text-[var(--text-secondary)]">
+                    {hasUnstagedDraft
+                      ? "Draft not staged yet. Tap Add response to include it in your submission."
+                      : "Type a response and tap Add response to stage it before submitting."}
+                  </p>
+                )}
               </div>
-
-              {textAnswers.length > 0 && (
-                <div className="mt-3 flex flex-wrap gap-2">
-                  {textAnswers.map((answer, index) => (
-                    <button
-                      key={`${answer}-${index}`}
-                      type="button"
-                      onClick={() => removeTextAnswer(index)}
-                      disabled={locked}
-                      className="px-2.5 py-1 rounded-full text-sm bg-[var(--color-action)]/15 border border-[var(--color-action)]/30 text-[var(--text-primary)] hover:bg-[var(--color-action)]/25"
-                    >
-                      {answer}
-                    </button>
-                  ))}
-                </div>
-              )}
 
               <Button
                 type="button"
                 variant="primary"
+                size="md"
+                fullWidth
+                onClick={addTextAnswer}
+                disabled={locked || remainingAnswers === 0 || !textInput.trim()}
+                className="mt-3 bg-[#6D8CF7] hover:bg-[#5C7DEB]"
+                aria-label="Add response to staging"
+              >
+                <Plus className="w-5 h-5 mr-2" />
+                Add response
+              </Button>
+
+              <div className="mt-3 rounded-lg border border-white/10 bg-black/20 p-3">
+                <div className="flex items-center justify-between gap-3 mb-2">
+                  <p className="text-sm font-medium text-[var(--text-primary)]">Staged responses (not sent yet)</p>
+                  <span className="text-xs px-2 py-1 rounded-full border border-white/20 text-[var(--text-secondary)]">
+                    {totalDraftAnswers}/{maxAnswers}
+                  </span>
+                </div>
+
+                {totalDraftAnswers === 0 ? (
+                  <p className="text-xs text-[var(--text-secondary)]">
+                    No staged responses yet. Add responses above, then tap Submit response to send them.
+                  </p>
+                ) : (
+                  <div className="flex flex-wrap gap-2">
+                    {stagedSelectOrTextOptions.map((option) => (
+                      <button
+                        key={`staged-option-${option.id}`}
+                        type="button"
+                        onClick={() => toggleSelectOrTextOption(option.id)}
+                        disabled={locked}
+                        className="px-2.5 py-1 rounded-full text-sm bg-white/10 border border-white/20 text-[var(--text-primary)] hover:bg-white/15"
+                      >
+                        Option {option.label}
+                      </button>
+                    ))}
+
+                    {textAnswers.map((answer, index) => (
+                      <button
+                        key={`${answer}-${index}`}
+                        type="button"
+                        onClick={() => removeTextAnswer(index)}
+                        disabled={locked}
+                        className="px-2.5 py-1 rounded-full text-sm bg-[var(--color-action)]/15 border border-[var(--color-action)]/30 text-[var(--text-primary)] hover:bg-[var(--color-action)]/25"
+                      >
+                        {answer}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              <Button
+                type="button"
+                variant="primary"
+                size="lg"
                 fullWidth
                 onClick={handleSubmitTextAnswers}
                 disabled={locked || totalDraftAnswers === 0}
                 className="mt-4"
               >
-                <Send className="w-4 h-4" />
+                <Send className="w-4 h-4 mr-2" />
                 Submit response
               </Button>
             </div>
