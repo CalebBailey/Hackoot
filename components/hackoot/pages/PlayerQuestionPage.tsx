@@ -10,7 +10,29 @@ import { PlayerPeer } from "@/transport/peer";
 import { PeerMessage } from "@/types";
 import { DEFAULT_QUESTION_TIME_LIMIT } from "@/utils/scoring";
 import { Plus, Send, Zap } from "lucide-react";
-import { getSelectableChoices, resolveQuizType } from "@/utils/teamBuilding";
+import { getSelectableChoices, normaliseAnswer, resolveQuizType } from "@/utils/teamBuilding";
+
+function deduplicateAnswers(values: string[]): string[] {
+  const unique: string[] = [];
+  const seen = new Set<string>();
+
+  for (const value of values) {
+    const trimmed = value.trim();
+    if (!trimmed) {
+      continue;
+    }
+
+    const key = normaliseAnswer(trimmed) || trimmed.toLowerCase();
+    if (seen.has(key)) {
+      continue;
+    }
+
+    seen.add(key);
+    unique.push(trimmed);
+  }
+
+  return unique;
+}
 
 export function PlayerQuestionPage() {
   const session = useSessionStore((state) => state.session);
@@ -108,7 +130,13 @@ export function PlayerQuestionPage() {
       return;
     }
 
-    setTextAnswers((current) => [...current, trimmed]);
+    const nextAnswers = deduplicateAnswers([...textAnswers, trimmed]);
+    if (nextAnswers.length === textAnswers.length) {
+      setTextInput("");
+      return;
+    }
+
+    setTextAnswers(nextAnswers);
     setTextInput("");
   };
 
@@ -173,8 +201,7 @@ export function PlayerQuestionPage() {
       .map((choice) => choice.text.trim())
       .filter(Boolean);
 
-    const allAnswers = Array.from(new Set([...selectedOptionTexts, ...textAnswers.map((answer) => answer.trim())]))
-      .filter(Boolean);
+    const allAnswers = deduplicateAnswers([...selectedOptionTexts, ...textAnswers]);
 
     if (allAnswers.length === 0) return;
 

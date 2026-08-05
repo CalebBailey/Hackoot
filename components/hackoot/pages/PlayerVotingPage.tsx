@@ -25,7 +25,10 @@ export function PlayerVotingPage() {
     if (!teamVoteContext) return [];
     return teamVoteContext.candidates.filter((candidate) => {
       if (teamVoteContext.allowOwnAnswerVoting) return true;
-      return candidate.participantId !== participantId;
+      const contributorIds = candidate.participantIds?.length
+        ? candidate.participantIds
+        : [candidate.participantId];
+      return participantId ? !contributorIds.includes(participantId) : true;
     });
   }, [teamVoteContext, participantId]);
 

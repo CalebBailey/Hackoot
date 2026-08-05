@@ -176,6 +176,7 @@ export interface DiscussionVoteCandidate {
   id: string;
   text: string;
   participantId: string;
+  participantIds?: string[];
   displayName?: string;
 }
 

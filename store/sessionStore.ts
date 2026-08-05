@@ -14,6 +14,29 @@ import {
   TeamResultSessionState,
 } from "../types";
 import { DEFAULT_QUESTION_TIME_LIMIT, sanitizeQuestionTimeLimit } from "@/utils/scoring";
+import { normaliseAnswer } from "@/utils/teamBuilding";
+
+function deduplicateTextAnswers(answers: string[]): string[] {
+  const unique: string[] = [];
+  const seen = new Set<string>();
+
+  for (const answer of answers) {
+    const trimmed = answer.trim();
+    if (!trimmed) {
+      continue;
+    }
+
+    const key = normaliseAnswer(trimmed) || trimmed.toLowerCase();
+    if (seen.has(key)) {
+      continue;
+    }
+
+    seen.add(key);
+    unique.push(trimmed);
+  }
+
+  return unique;
+}
 
 interface TeamVoteContext {
   questionId: string;
@@ -287,16 +310,30 @@ export const useSessionStore = create<SessionStore>((set, get) => ({
   recordTeamTextAnswers: (participantId, questionId, answers, submittedAt) => {
     set((state) => {
       if (!state.session) return state;
+      const deduplicatedAnswers = deduplicateTextAnswers(answers);
+      if (deduplicatedAnswers.length === 0) {
+        return state;
+      }
+
+      const existingAnswers = state.session.answers.filter(
+        (entry) =>
+          !(
+            entry.participantId === participantId &&
+            entry.questionId === questionId &&
+            Array.isArray(entry.textAnswers)
+          )
+      );
+
       const answer: AnswerRecord = {
         participantId,
         questionId,
         submittedAt,
-        textAnswers: answers,
+        textAnswers: deduplicatedAnswers,
       };
       return {
         session: {
           ...state.session,
-          answers: [...state.session.answers, answer],
+          answers: [...existingAnswers, answer],
           participants: state.session.participants.map((p) =>
             p.participantId === participantId
               ? { ...p, answeredCurrentQuestion: true }
@@ -310,16 +347,31 @@ export const useSessionStore = create<SessionStore>((set, get) => ({
   recordTeamVotes: (participantId, questionId, answerIds, submittedAt) => {
     set((state) => {
       if (!state.session) return state;
+
+      const uniqueAnswerIds = Array.from(new Set(answerIds.filter(Boolean)));
+      if (uniqueAnswerIds.length === 0) {
+        return state;
+      }
+
+      const existingAnswers = state.session.answers.filter(
+        (entry) =>
+          !(
+            entry.participantId === participantId &&
+            entry.questionId === questionId &&
+            Array.isArray(entry.voteAnswerIds)
+          )
+      );
+
       const answer: AnswerRecord = {
         participantId,
         questionId,
         submittedAt,
-        voteAnswerIds: answerIds,
+        voteAnswerIds: uniqueAnswerIds,
       };
       return {
         session: {
           ...state.session,
-          answers: [...state.session.answers, answer],
+          answers: [...existingAnswers, answer],
           participants: state.session.participants.map((p) =>
             p.participantId === participantId
               ? { ...p, answeredCurrentQuestion: true }

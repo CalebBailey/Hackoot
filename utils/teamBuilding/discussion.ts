@@ -21,7 +21,11 @@ export function buildDiscussionQueue(
   return candidates
     .map((candidate) => {
       const voteCount = totals.get(candidate.id) ?? 0;
-      const participantIds = candidate.participantId ? [candidate.participantId] : [];
+      const participantIds = candidate.participantIds?.length
+        ? Array.from(new Set(candidate.participantIds))
+        : candidate.participantId
+          ? [candidate.participantId]
+          : [];
       return {
         id: candidate.id,
         text: candidate.text,

@@ -25,6 +25,7 @@ import {
   buildWordCloud,
   getSelectableChoices,
   groupAnswersByNormalisedText,
+  normaliseAnswer,
   resolveQuizType,
 } from "@/utils/teamBuilding";
 
@@ -85,6 +86,40 @@ function buildTeamResults(question: Question, answers: AnswerRecord[]): TeamResu
   };
 }
 
+function buildDiscussionCandidates(
+  rawAnswers: Array<{ answerId: string; participantId: string; text: string }>
+): DiscussionVoteCandidate[] {
+  const candidatesByKey = new Map<string, DiscussionVoteCandidate>();
+
+  for (const answer of rawAnswers) {
+    const trimmedText = answer.text.trim();
+    if (!trimmedText) {
+      continue;
+    }
+
+    const key = normaliseAnswer(trimmedText) || trimmedText.toLowerCase();
+    const existing = candidatesByKey.get(key);
+
+    if (existing) {
+      const participantIds = existing.participantIds ?? [existing.participantId];
+      if (!participantIds.includes(answer.participantId)) {
+        participantIds.push(answer.participantId);
+      }
+      existing.participantIds = participantIds;
+      continue;
+    }
+
+    candidatesByKey.set(key, {
+      id: answer.answerId,
+      text: trimmedText,
+      participantId: answer.participantId,
+      participantIds: [answer.participantId],
+    });
+  }
+
+  return Array.from(candidatesByKey.values());
+}
+
 export function HostResultsPage({ quizId }: HostResultsPageProps) {
   const getQuizById = useQuizStore((state) => state.getQuizById);
   const quiz = getQuizById(quizId);
@@ -124,11 +159,7 @@ export function HostResultsPage({ quizId }: HostResultsPageProps) {
         }
 
         const rawAnswers = buildRawAnswers(currentQuestion, session.answers);
-        const candidates: DiscussionVoteCandidate[] = rawAnswers.map((answer) => ({
-          id: answer.answerId,
-          text: answer.text,
-          participantId: answer.participantId,
-        }));
+        const candidates = buildDiscussionCandidates(rawAnswers);
         const maxVotesPerPlayer =
           currentQuestion.maxVotesPerPlayer ??
           quiz.teamBuildingSettings?.maxVotesPerPlayer ??
