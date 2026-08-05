@@ -6,6 +6,7 @@ An interactive, real-time quiz platform supporting up to 50 simultaneous players
 
 - **Quiz Management** - Create, edit, delete, and import quizzes with multiple-choice questions
 - **Question Media** - Attach an image to any question via URL or by searching Giphy directly in the editor
+- **Team Building Select plus Text** - For select-or-text questions, answer limits apply across both selected options and typed responses
 - **Live Sessions** - Host a quiz session and share a room code or QR code for players to join
 - **Up to 50 Players** - Supports up to 50 concurrent participants per session
 - **Time-Based Scoring** - 20-second timer per question; faster correct answers earn more points (up to 1,000 per question)

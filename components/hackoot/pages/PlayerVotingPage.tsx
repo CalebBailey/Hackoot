@@ -7,6 +7,7 @@ import { PlayerPeer } from "@/transport/peer";
 import { PeerMessage } from "@/types";
 import { Send, Vote } from "lucide-react";
 import { Button } from "../Button";
+import { Checkbox } from "@/components/ui/checkbox";
 
 export function PlayerVotingPage() {
   const participantId = useSessionStore((state) => state.participantId);
@@ -93,6 +94,8 @@ export function PlayerVotingPage() {
     return null;
   }
 
+  const reachedVoteLimit = selectedAnswerIds.length >= teamVoteContext.maxVotesPerPlayer;
+
   return (
     <div className="h-screen overflow-hidden flex flex-col px-4 py-4 max-w-2xl mx-auto">
       <div className="glass-card p-6 mb-4">
@@ -117,23 +120,40 @@ export function PlayerVotingPage() {
           <div className="space-y-2 overflow-y-auto pr-1">
             {visibleCandidates.map((candidate) => {
               const isSelected = selectedAnswerIds.includes(candidate.id);
+              const disableUnchecked = !isSelected && reachedVoteLimit;
+              const disabled = submitted || disableUnchecked;
+
               return (
-                <button
+                <label
                   key={candidate.id}
-                  type="button"
-                  onClick={() => toggleVote(candidate.id)}
-                  disabled={submitted}
-                  className={`w-full text-left px-3 py-2 rounded-lg border transition-colors ${
+                  htmlFor={`vote-${candidate.id}`}
+                  className={`w-full text-left px-3 py-2.5 rounded-lg border transition-colors flex items-center gap-3 ${
                     isSelected
                       ? "bg-[var(--color-action)]/15 border-[var(--color-action)]/40 text-[var(--text-primary)]"
                       : "bg-white/[0.03] border-white/10 text-[var(--text-primary)] hover:border-[var(--color-action)]/40"
-                  } ${submitted ? "opacity-70" : ""}`}
+                  } ${disabled ? "opacity-70" : "cursor-pointer"}`}
                 >
-                  {candidate.text}
-                </button>
+                  <Checkbox
+                    id={`vote-${candidate.id}`}
+                    checked={isSelected}
+                    onCheckedChange={() => toggleVote(candidate.id)}
+                    disabled={disabled}
+                    aria-label={`Vote for response ${candidate.text}`}
+                    className="size-5 border-white/30 data-[state=checked]:bg-[var(--color-action)] data-[state=checked]:border-[var(--color-action)] data-[state=checked]:text-white"
+                  />
+                  <span className="flex-1">{candidate.text}</span>
+                  {isSelected && (
+                    <span className="text-xs font-medium text-[var(--color-action)]">Selected</span>
+                  )}
+                </label>
               );
             })}
           </div>
+        )}
+        {!submitted && reachedVoteLimit && visibleCandidates.length > 0 && (
+          <p className="mt-3 text-xs text-amber-300/90">
+            Maximum votes reached. Remove one selection to pick another.
+          </p>
         )}
       </div>
 

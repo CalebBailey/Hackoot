@@ -10,6 +10,7 @@ import { PlayerPeer } from "@/transport/peer";
 import { PeerMessage } from "@/types";
 import { DEFAULT_QUESTION_TIME_LIMIT } from "@/utils/scoring";
 import { Plus, Send, Zap } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
 import { getSelectableChoices, normaliseAnswer, resolveQuizType } from "@/utils/teamBuilding";
 
 function deduplicateAnswers(values: string[]): string[] {
@@ -126,7 +127,12 @@ export function PlayerQuestionPage() {
         ? currentQuestion.maxAnswersPerPlayer ?? 3
         : 1;
 
-    if (textAnswers.length >= maxAnswers) {
+    const totalCurrentAnswers =
+      currentQuestion?.type === "select-or-text"
+        ? selectedOptionIds.length + textAnswers.length
+        : textAnswers.length;
+
+    if (totalCurrentAnswers >= maxAnswers) {
       return;
     }
 
@@ -239,6 +245,9 @@ export function PlayerQuestionPage() {
     currentQuestion.type === "select-or-text"
       ? currentQuestion.maxAnswersPerPlayer ?? 3
       : 1;
+  const totalDraftAnswers = selectedOptionIds.length + textAnswers.length;
+  const remainingAnswers = Math.max(0, maxAnswers - totalDraftAnswers);
+  const reachedMaxAnswers = totalDraftAnswers >= maxAnswers;
 
   return (
     <div className="h-screen overflow-hidden flex flex-col px-4 py-4 max-w-2xl mx-auto">
@@ -302,37 +311,56 @@ export function PlayerQuestionPage() {
           <div className="w-full max-w-xl space-y-4">
             {currentQuestion.type === "select-or-text" && selectableChoices.length > 0 && (
               <div className="glass-card p-4 space-y-2">
-                <p className="text-sm text-[var(--text-secondary)]">Select one or more options</p>
+                <div className="flex items-center justify-between gap-3">
+                  <p className="text-sm text-[var(--text-secondary)]">Select options and/or add your own answer</p>
+                  <span className="text-xs font-semibold px-2 py-1 rounded-full border border-white/20 text-[var(--text-secondary)]">
+                    {totalDraftAnswers}/{maxAnswers}
+                  </span>
+                </div>
                 <div className="space-y-2">
                   {selectableChoices.map((choice) => {
                     const checked = selectedOptionIds.includes(choice.id);
+                    const disableUnchecked = !checked && reachedMaxAnswers;
+                    const disabled = locked || disableUnchecked;
+
                     return (
                       <label
                         key={choice.id}
-                        className={`flex items-center gap-2 text-[var(--text-primary)] rounded-lg px-3 py-2 border transition-colors ${
+                        htmlFor={`choice-${choice.id}`}
+                        className={`flex items-center gap-3 text-[var(--text-primary)] rounded-lg px-3 py-2.5 border transition-colors ${
                           checked
                             ? "bg-[var(--color-action)]/15 border-[var(--color-action)]/40"
                             : "bg-white/[0.03] border-white/10"
-                        } ${locked ? "opacity-60" : "hover:border-[var(--color-action)]/40 cursor-pointer"}`}
+                        } ${disabled ? "opacity-60" : "hover:border-[var(--color-action)]/40 cursor-pointer"}`}
                       >
-                        <input
-                          type="checkbox"
+                        <Checkbox
+                          id={`choice-${choice.id}`}
                           checked={checked}
-                          onChange={() => toggleSelectOrTextOption(choice.id)}
-                          disabled={locked}
-                          className="accent-[var(--color-action)]"
+                          onCheckedChange={() => toggleSelectOrTextOption(choice.id)}
+                          disabled={disabled}
+                          aria-label={`Select option ${choice.text}`}
+                          className="size-5 border-white/30 data-[state=checked]:bg-[var(--color-action)] data-[state=checked]:border-[var(--color-action)] data-[state=checked]:text-white"
                         />
-                        {choice.text}
+                        <span className="flex-1">{choice.text}</span>
+                        {checked && (
+                          <span className="text-xs font-medium text-[var(--color-action)]">Selected</span>
+                        )}
                       </label>
                     );
                   })}
                 </div>
+                {!locked && reachedMaxAnswers && (
+                  <p className="text-xs text-amber-300/90">
+                    Maximum of {maxAnswers} combined answers reached. Remove one to add another.
+                  </p>
+                )}
               </div>
             )}
 
             <div className="glass-card p-4">
               <p className="text-sm text-[var(--text-secondary)] mb-2">
                 Add up to {maxAnswers} answer{maxAnswers !== 1 ? "s" : ""}
+                {!locked ? ` - ${remainingAnswers} remaining` : ""}
               </p>
               <div className="flex items-center gap-2">
                 <input
@@ -346,7 +374,7 @@ export function PlayerQuestionPage() {
                     }
                   }}
                   placeholder="Type your answer"
-                  disabled={locked || textAnswers.length >= maxAnswers}
+                  disabled={locked || remainingAnswers === 0}
                   className="flex-1 bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-[var(--text-primary)] placeholder:text-[var(--text-secondary)]/50 focus:outline-none focus:ring-2 focus:ring-[var(--color-action)]/50 focus:border-[var(--color-action)]"
                 />
                 <Button
@@ -354,7 +382,7 @@ export function PlayerQuestionPage() {
                   variant="ghost"
                   size="sm"
                   onClick={addTextAnswer}
-                  disabled={locked || textAnswers.length >= maxAnswers}
+                  disabled={locked || remainingAnswers === 0 || !textInput.trim()}
                   className="px-2.5 py-2 rounded-lg border border-white/10 text-[var(--text-secondary)] hover:text-[var(--color-action)] hover:border-[var(--color-action)]/50"
                   aria-label="Add answer"
                 >
@@ -383,7 +411,7 @@ export function PlayerQuestionPage() {
                 variant="primary"
                 fullWidth
                 onClick={handleSubmitTextAnswers}
-                disabled={locked || selectedOptionIds.length + textAnswers.length === 0}
+                disabled={locked || totalDraftAnswers === 0}
                 className="mt-4"
               >
                 <Send className="w-4 h-4" />
