@@ -10,6 +10,7 @@ interface AnswerGridProps {
   selectedId?: string;
   locked?: boolean;
   revealedCorrectIds?: string[];
+  showChoiceText?: boolean;
 }
 
 const COLORS = [
@@ -27,6 +28,7 @@ export function AnswerGrid({
   selectedId,
   locked,
   revealedCorrectIds,
+  showChoiceText = true,
 }: AnswerGridProps) {
   const isRevealed = revealedCorrectIds && revealedCorrectIds.length > 0;
 
@@ -56,12 +58,12 @@ export function AnswerGrid({
               isRevealed && !isCorrect && "opacity-60"
             )}
             aria-pressed={isSelected}
-            aria-label={`Answer ${LABELS[index]}: ${choice.text}`}
+            aria-label={showChoiceText ? `Answer ${LABELS[index]}: ${choice.text}` : `Answer ${LABELS[index]}`}
           >
             <span className="absolute top-2 left-3 text-sm font-bold opacity-70">
               {LABELS[index]}
             </span>
-            <span className="block mt-2">{choice.text}</span>
+            {showChoiceText ? <span className="block mt-2">{choice.text}</span> : null}
             
             {/* Selected indicator */}
             {locked && isSelected && !isRevealed && (

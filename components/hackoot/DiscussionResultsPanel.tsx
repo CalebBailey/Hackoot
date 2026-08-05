@@ -8,10 +8,6 @@ interface DiscussionResultsPanelProps {
   title?: string;
 }
 
-function formatVoteShare(voteShare: number): string {
-  return `${Math.round(voteShare * 100)}%`;
-}
-
 export function DiscussionResultsPanel({
   items,
   topCount = 3,
@@ -51,7 +47,7 @@ export function DiscussionResultsPanel({
                     <span className="text-[var(--text-primary)]">{item.text}</span>
                   </div>
                   <span className="text-[var(--text-primary)]/90">
-                    {item.voteCount} vote{item.voteCount === 1 ? "" : "s"} ({formatVoteShare(item.voteShare)})
+                    {item.voteCount} vote{item.voteCount === 1 ? "" : "s"}
                   </span>
                 </div>
               ))}

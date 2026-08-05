@@ -13,6 +13,49 @@ import { Plus, Send, Zap } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { getSelectableChoices, normaliseAnswer, resolveQuizType } from "@/utils/teamBuilding";
 
+const OPTION_PALETTES = [
+  {
+    baseBg: "bg-[#10B981]/10",
+    baseBorder: "border-[#10B981]/35",
+    activeBg: "bg-[#10B981]/22",
+    activeBorder: "border-[#10B981]/65",
+    badge: "bg-[#10B981]",
+  },
+  {
+    baseBg: "bg-[#F59E0B]/10",
+    baseBorder: "border-[#F59E0B]/35",
+    activeBg: "bg-[#F59E0B]/22",
+    activeBorder: "border-[#F59E0B]/65",
+    badge: "bg-[#F59E0B]",
+  },
+  {
+    baseBg: "bg-[#F43F5E]/10",
+    baseBorder: "border-[#F43F5E]/35",
+    activeBg: "bg-[#F43F5E]/22",
+    activeBorder: "border-[#F43F5E]/65",
+    badge: "bg-[#F43F5E]",
+  },
+  {
+    baseBg: "bg-[#3B82F6]/10",
+    baseBorder: "border-[#3B82F6]/35",
+    activeBg: "bg-[#3B82F6]/22",
+    activeBorder: "border-[#3B82F6]/65",
+    badge: "bg-[#3B82F6]",
+  },
+];
+
+function getOptionLabel(index: number): string {
+  if (index >= 0 && index < 26) {
+    return String.fromCharCode(65 + index);
+  }
+
+  return `${index + 1}`;
+}
+
+function getOptionPalette(index: number) {
+  return OPTION_PALETTES[index % OPTION_PALETTES.length];
+}
+
 function deduplicateAnswers(values: string[]): string[] {
   const unique: string[] = [];
   const seen = new Set<string>();
@@ -306,6 +349,7 @@ export function PlayerQuestionPage() {
             onSelect={handleSelect}
             selectedId={selectedId || undefined}
             locked={locked}
+            showChoiceText={!isTeamBuilding}
           />
         ) : (
           <div className="w-full max-w-xl space-y-4">
@@ -318,10 +362,12 @@ export function PlayerQuestionPage() {
                   </span>
                 </div>
                 <div className="space-y-2">
-                  {selectableChoices.map((choice) => {
+                  {selectableChoices.map((choice, index) => {
                     const checked = selectedOptionIds.includes(choice.id);
                     const disableUnchecked = !checked && reachedMaxAnswers;
                     const disabled = locked || disableUnchecked;
+                    const optionLabel = getOptionLabel(index);
+                    const optionPalette = getOptionPalette(index);
 
                     return (
                       <label
@@ -329,21 +375,26 @@ export function PlayerQuestionPage() {
                         htmlFor={`choice-${choice.id}`}
                         className={`flex items-center gap-3 text-[var(--text-primary)] rounded-lg px-3 py-2.5 border transition-colors ${
                           checked
-                            ? "bg-[var(--color-action)]/15 border-[var(--color-action)]/40"
-                            : "bg-white/[0.03] border-white/10"
-                        } ${disabled ? "opacity-60" : "hover:border-[var(--color-action)]/40 cursor-pointer"}`}
+                            ? `${optionPalette.activeBg} ${optionPalette.activeBorder}`
+                            : `${optionPalette.baseBg} ${optionPalette.baseBorder}`
+                        } ${disabled ? "opacity-60" : "hover:opacity-95 cursor-pointer"}`}
                       >
                         <Checkbox
                           id={`choice-${choice.id}`}
                           checked={checked}
                           onCheckedChange={() => toggleSelectOrTextOption(choice.id)}
                           disabled={disabled}
-                          aria-label={`Select option ${choice.text}`}
+                          aria-label={isTeamBuilding ? `Select option ${optionLabel}` : `Select option ${choice.text}`}
                           className="size-5 border-white/30 data-[state=checked]:bg-[var(--color-action)] data-[state=checked]:border-[var(--color-action)] data-[state=checked]:text-white"
                         />
-                        <span className="flex-1">{choice.text}</span>
+                        <span
+                          className={`inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-xs font-bold text-white ${optionPalette.badge}`}
+                          aria-hidden="true"
+                        >
+                          {optionLabel}
+                        </span>
                         {checked && (
-                          <span className="text-xs font-medium text-[var(--color-action)]">Selected</span>
+                          <span className="text-xs font-medium text-[var(--text-primary)]/85">Selected</span>
                         )}
                       </label>
                     );

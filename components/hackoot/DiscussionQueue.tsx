@@ -31,7 +31,9 @@ export function DiscussionQueue({
                 <span className="text-[var(--text-secondary)] w-6">{index + 1}.</span>
                 <span className="text-[var(--text-primary)]">{item.text}</span>
               </div>
-              <span className="text-[var(--text-secondary)]">{Math.round(item.voteShare * 100)}%</span>
+              <span className="text-[var(--text-secondary)]">
+                {item.voteCount} vote{item.voteCount === 1 ? "" : "s"}
+              </span>
             </div>
           ))}
         </div>
