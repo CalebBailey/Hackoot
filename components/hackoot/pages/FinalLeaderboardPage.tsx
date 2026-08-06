@@ -54,7 +54,6 @@ export function FinalLeaderboardPage() {
         answers: session.answers,
         leaderboard,
         teamClusters: session.teamClusters,
-        teamWordCloud: session.teamWordCloud,
         teamDiscussionQueue: session.teamDiscussionQueue,
         teamQuestionPrompts: session.teamQuestionPrompts,
         endedAt: new Date().toISOString(),

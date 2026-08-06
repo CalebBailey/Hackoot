@@ -7,7 +7,6 @@ import { Button } from "../Button";
 import { AnswerGrid } from "../AnswerGrid";
 import { Leaderboard } from "../Leaderboard";
 import { ClusterView } from "../ClusterView";
-import { WordCloud } from "../WordCloud";
 import { DiscussionQueue } from "../DiscussionQueue";
 import { DiscussionResultsPanel } from "../DiscussionResultsPanel";
 import { navigate } from "../HackootApp";
@@ -18,11 +17,9 @@ import {
   DiscussionVoteCandidate,
   Question,
   TeamAnswerCluster,
-  WordCloudTerm,
 } from "@/types";
 import {
   buildDiscussionQueue,
-  buildWordCloud,
   getSelectableChoices,
   groupAnswersByNormalisedText,
   normaliseAnswer,
@@ -35,7 +32,6 @@ interface HostResultsPageProps {
 
 interface TeamResultSnapshot {
   groupedAnswers: TeamAnswerCluster[];
-  wordCloud: WordCloudTerm[];
 }
 
 function buildRawAnswers(question: Question, answers: AnswerRecord[]) {
@@ -78,11 +74,9 @@ function buildRawAnswers(question: Question, answers: AnswerRecord[]) {
 function buildTeamResults(question: Question, answers: AnswerRecord[]): TeamResultSnapshot {
   const rawAnswers = buildRawAnswers(question, answers);
   const groupedAnswers = groupAnswersByNormalisedText(rawAnswers).clusters;
-  const wordCloud = buildWordCloud(rawAnswers.map((answer) => answer.text));
 
   return {
     groupedAnswers,
-    wordCloud,
   };
 }
 
@@ -190,14 +184,12 @@ export function HostResultsPage({ quizId }: HostResultsPageProps) {
       setTeamResultsSnapshot({
         questionId: currentQuestion.id,
         groupedAnswers: resultSnapshot.groupedAnswers,
-        wordCloud: resultSnapshot.wordCloud,
         discussionQueue: [],
       }, "team-results");
       hostPeer.broadcast({
         type: "teamResultsPublished",
         questionId: currentQuestion.id,
         groupedAnswers: resultSnapshot.groupedAnswers,
-        wordCloud: resultSnapshot.wordCloud,
         sessionState: "team-results",
       });
       setSessionState("team-results");
@@ -272,7 +264,6 @@ export function HostResultsPage({ quizId }: HostResultsPageProps) {
     setTeamResultsSnapshot({
       questionId: currentQuestion.id,
       groupedAnswers: resultSnapshot.groupedAnswers,
-      wordCloud: resultSnapshot.wordCloud,
       discussionQueue,
     }, "team-discussion");
 
@@ -284,7 +275,6 @@ export function HostResultsPage({ quizId }: HostResultsPageProps) {
       type: "teamResultsPublished",
       questionId: currentQuestion.id,
       groupedAnswers: resultSnapshot.groupedAnswers,
-      wordCloud: resultSnapshot.wordCloud,
       discussionQueue,
       sessionState: "team-discussion",
     });
@@ -375,7 +365,6 @@ export function HostResultsPage({ quizId }: HostResultsPageProps) {
                 />
               ) : null}
               <ClusterView clusters={teamResults.groupedAnswers} />
-              <WordCloud terms={teamResults.wordCloud} />
               {currentQuestion.type !== "discussion" && session.teamDiscussionQueue?.[currentQuestion.id]?.length ? (
                 <DiscussionQueue items={session.teamDiscussionQueue[currentQuestion.id]} />
               ) : null}

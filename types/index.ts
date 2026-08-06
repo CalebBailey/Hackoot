@@ -6,7 +6,6 @@ export interface Choice {
 }
 
 export interface TeamBuildingQuizSettings {
-  enableWordCloud: boolean;
   enableFuzzyGrouping: boolean;
   enableDiscussionVoting: boolean;
   saveOutputsForReuse: boolean;
@@ -114,11 +113,6 @@ export interface TeamAnswerCluster {
   count: number;
 }
 
-export interface WordCloudTerm {
-  text: string;
-  weight: number;
-}
-
 export interface DiscussionQueueItem {
   id: string;
   text: string;
@@ -141,7 +135,6 @@ export interface Session {
   questionStartedAt: number | null;
   answers: AnswerRecord[];
   teamClusters?: Record<string, TeamAnswerCluster[]>;
-  teamWordCloud?: Record<string, WordCloudTerm[]>;
   teamDiscussionQueue?: Record<string, DiscussionQueueItem[]>;
   teamQuestionPrompts?: Record<string, string>;
 }
@@ -212,7 +205,6 @@ export type PeerMessage =
       type: "teamResultsPublished";
       questionId: string;
       groupedAnswers?: TeamAnswerCluster[];
-      wordCloud?: WordCloudTerm[];
       discussionQueue?: DiscussionQueueItem[];
       sessionState?: TeamResultSessionState;
     }
@@ -241,7 +233,6 @@ export type PeerMessage =
       teamResultsSnapshot?: {
         questionId: string;
         groupedAnswers: TeamAnswerCluster[];
-        wordCloud: WordCloudTerm[];
         discussionQueue: DiscussionQueueItem[];
       };
     };

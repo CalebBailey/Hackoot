@@ -1,7 +1,6 @@
 import { QuizType, TeamBuildingQuizSettings } from "@/types";
 
 export const DEFAULT_TEAM_BUILDING_SETTINGS: TeamBuildingQuizSettings = {
-  enableWordCloud: true,
   enableFuzzyGrouping: false,
   enableDiscussionVoting: true,
   saveOutputsForReuse: false,

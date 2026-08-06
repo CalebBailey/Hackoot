@@ -59,7 +59,7 @@ Add `team-building` as a quiz type beside `standard`.
 
 - Deterministic grouping of similar answers.
 - Optional AI-assisted fuzzy grouping.
-- Word cloud output from moderated and normalised terms.
+- Match-focused output showing who selected or introduced each answer cluster.
 - Discussion queue ordered by vote share.
 - Optional interest-match graph and breakout suggestions in later phases.
 
@@ -78,7 +78,6 @@ For negative experience questions:
 - Scoring: disabled.
 - Podium/final leaderboard winner framing: disabled.
 - Discussion voting: enabled.
-- Word cloud: enabled.
 - Max answers per player: default 3.
 - Max votes per player: default 3.
 
@@ -111,7 +110,6 @@ export interface Quiz {
 }
 
 export interface TeamBuildingQuizSettings {
-  enableWordCloud: boolean;
   enableFuzzyGrouping: boolean;
   enableDiscussionVoting: boolean;
   saveOutputsForReuse: boolean;
@@ -195,7 +193,6 @@ Add state slices for:
 
 - free-text submissions per question
 - grouped clusters
-- word cloud terms
 - discussion candidates
 - votes and vote share
 - discussion queue state (open, skipped, discussed)
@@ -286,7 +283,6 @@ Changes:
 
 New components under `components/hackoot`:
 
-- `WordCloud.tsx`
 - `ClusterView.tsx`
 - `DiscussionQueue.tsx`
 - `InterestMatchGraph.tsx` (post-MVP)
@@ -306,6 +302,8 @@ Implement `utils/teamBuilding/grouping.ts`:
 
 - exact key grouping
 - synonym canonicalisation
+- phrase token overlap for multi-word answers
+- light stemming and stop-word filtering for phrase matching
 - cluster frequency and player membership
 
 Self-match prevention rule:
@@ -327,29 +325,25 @@ Behaviour:
   - 0.60-0.84 host review flag
   - < 0.60 keep separate
 
-## 11. Word Cloud Design
+## 11. Phrase Similarity for Manual Inputs
 
-MVP utility:
+For manual text answers (including multi-word phrases), matching must evaluate term similarity rather than strict full-string equality.
 
-- `utils/teamBuilding/wordCloud.ts`
+MVP approach:
 
-Pipeline:
+1. normalise answers (trim, lower-case, punctuation handling, synonyms)
+2. tokenise phrases into terms
+3. filter stop words
+4. apply light stemming (for example plural and simple verb endings)
+5. compute overlap score between token sets
+6. merge into a shared cluster when score and shared-term thresholds are met
 
-1. normalise answers
-2. tokenise
-3. remove stop words
-4. synonym merge
-5. weight count
-6. return top N terms
+Cluster output must include:
 
-Output shape:
-
-```ts
-export interface WordCloudTerm {
-  text: string;
-  weight: number;
-}
-```
+- canonical cluster text
+- answer IDs in cluster
+- participant IDs in cluster
+- cluster count
 
 ## 12. Data Collection and Reuse in Current Architecture
 
@@ -399,7 +393,7 @@ Deliver:
 - `quizType` support with backward compatibility.
 - this-or-that, free-text, multiple choice with free-text, discussion question models and editor UI.
 - Team Building host/player flow with submission and discussion voting.
-- deterministic grouping and word cloud generation.
+- deterministic grouping with phrase-level similarity for manual text answers.
 - no scoring/podium for Team Building sessions.
 - exportable Team Building session outputs.
 
@@ -463,7 +457,7 @@ Acceptance checks:
 - Update create/edit quiz pages for mode and question type editing.
 - Add Team Building player submission and voting screens.
 - Add host discussion queue and grouped result views.
-- Add word cloud and cluster visualisation components.
+- Add cluster and discussion visualisation components.
 
 ### Data and governance
 

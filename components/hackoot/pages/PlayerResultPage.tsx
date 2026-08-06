@@ -8,7 +8,6 @@ import { PlayerPeer } from "@/transport/peer";
 import { PeerMessage, Question } from "@/types";
 import { resolveQuizType } from "@/utils/teamBuilding";
 import { ClusterView } from "../ClusterView";
-import { WordCloud } from "../WordCloud";
 import { DiscussionResultsPanel } from "../DiscussionResultsPanel";
 
 function toRuntimeQuestion(message: Extract<PeerMessage, { type: "questionStarted" }>): Question {
@@ -87,7 +86,6 @@ export function PlayerResultPage() {
         setTeamResultsSnapshot({
           questionId: message.questionId,
           groupedAnswers: message.groupedAnswers ?? [],
-          wordCloud: message.wordCloud ?? [],
           discussionQueue: message.discussionQueue ?? [],
         }, message.sessionState ?? "team-results");
         setSessionState(message.sessionState ?? "team-results");
@@ -119,7 +117,6 @@ export function PlayerResultPage() {
     isTeamBuilding &&
     teamResultsSnapshot !== null &&
     (teamResultsSnapshot.groupedAnswers.length > 0 ||
-      teamResultsSnapshot.wordCloud.length > 0 ||
       teamResultsSnapshot.discussionQueue.length > 0);
 
   return (
@@ -203,7 +200,6 @@ export function PlayerResultPage() {
             <DiscussionResultsPanel items={teamResultsSnapshot.discussionQueue} title="Top selected answers" />
           ) : null}
           <ClusterView clusters={teamResultsSnapshot.groupedAnswers} title="Current grouped answers" maxItems={6} />
-          <WordCloud terms={teamResultsSnapshot.wordCloud} title="Current word cloud" maxItems={16} />
           {!isDiscussionRound && teamResultsSnapshot.discussionQueue.length > 0 ? (
             <DiscussionResultsPanel items={teamResultsSnapshot.discussionQueue} title="Current discussion queue" />
           ) : null}

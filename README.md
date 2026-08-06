@@ -6,12 +6,17 @@ An interactive, real-time quiz platform supporting up to 50 simultaneous players
 
 - **Quiz Management** - Create, edit, delete, and import quizzes with multiple-choice questions
 - **Question Media** - Attach an image to any question via URL or by searching Giphy directly in the editor
+- **Team Building Mode** - Run non-competitive sessions with this-or-that, free-text, select-or-text, and discussion question types
 - **Team Building Select plus Text** - For select-or-text questions, answer limits apply across both selected options and typed responses
+- **Phrase-Based Matching** - Manual multi-word responses are grouped using token overlap, stop-word filtering, and light stemming to improve matching quality
+- **Match-Centred Results** - Team Building results focus on grouped answers and discussion queues, including who selected or introduced each matched cluster
 - **Live Sessions** - Host a quiz session and share a room code or QR code for players to join
 - **Up to 50 Players** - Supports up to 50 concurrent participants per session
 - **Time-Based Scoring** - 20-second timer per question; faster correct answers earn more points (up to 1,000 per question)
 - **Live Leaderboard** - Rankings are shown after every question and at the end of the session
 - **Cross-Network Multiplayer** - Uses Pusher Channels over WebSockets for reliable real-time communication across mobile and home networks
+
+> **Team Building outputs** - Word cloud output is intentionally not included. The mode is designed to show response clusters and participant matching signals only.
 
 ## Tech Stack
 
@@ -97,11 +102,19 @@ pnpm test:e2e
 ### Hosting a Quiz
 
 1. Open the app and create a quiz from the **Create Quiz** page
-2. Add your questions and choices, marking the correct answer for each
-3. Optionally attach an image to a question - paste a URL into the image field or click **GIF** to search Giphy
-4. From the home page, select your quiz and click **Host**
-5. Share the room code or QR code displayed on screen with your players
-6. Start the session once players have joined - advance through questions and review the leaderboard after each one
+2. Choose the quiz type (**Standard** or **Team Building**)
+3. Add your questions and choices, marking the correct answer for each Standard MCQ
+4. For Team Building, configure answer/vote limits and use select-or-text, free-text, or discussion prompts as needed
+5. Optionally attach an image to a question - paste a URL into the image field or click **GIF** to search Giphy
+6. From the home page, select your quiz and click **Host**
+7. Share the room code or QR code displayed on screen with your players
+8. Start the session once players have joined - advance through questions and review the leaderboard after each one
+
+### Team Building Session Notes
+
+- Team Building is participation-first: no points-based winner framing and no podium emphasis.
+- Matching is based on grouped answers, including phrase similarity for manual text entries.
+- Discussion questions include a voting phase and a host-led discussion queue.
 
 ### Joining a Session
 

@@ -9,7 +9,6 @@ import {
   DiscussionVoteCandidate,
   DiscussionQueueItem,
   TeamAnswerCluster,
-  WordCloudTerm,
   SessionState,
   TeamResultSessionState,
 } from "../types";
@@ -48,7 +47,6 @@ interface TeamVoteContext {
 interface TeamResultsSnapshot {
   questionId: string;
   groupedAnswers: TeamAnswerCluster[];
-  wordCloud: WordCloudTerm[];
   discussionQueue: DiscussionQueueItem[];
 }
 
@@ -135,7 +133,6 @@ export const useSessionStore = create<SessionStore>((set, get) => ({
         questionStartedAt: null,
         answers: [],
         teamClusters: {},
-        teamWordCloud: {},
         teamDiscussionQueue: {},
         teamQuestionPrompts: {},
       },
@@ -398,10 +395,6 @@ export const useSessionStore = create<SessionStore>((set, get) => ({
           teamClusters: {
             ...state.session.teamClusters,
             [snapshot.questionId]: snapshot.groupedAnswers,
-          },
-          teamWordCloud: {
-            ...state.session.teamWordCloud,
-            [snapshot.questionId]: snapshot.wordCloud,
           },
           teamDiscussionQueue: {
             ...state.session.teamDiscussionQueue,

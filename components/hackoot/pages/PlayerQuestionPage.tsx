@@ -137,7 +137,6 @@ export function PlayerQuestionPage() {
         setTeamResultsSnapshot({
           questionId: message.questionId,
           groupedAnswers: message.groupedAnswers ?? [],
-          wordCloud: message.wordCloud ?? [],
           discussionQueue: message.discussionQueue ?? [],
         }, message.sessionState ?? "team-results");
         setSessionState(message.sessionState ?? "team-results");
