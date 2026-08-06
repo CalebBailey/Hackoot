@@ -90,6 +90,7 @@ export function PlayerQuestionPage() {
   const setTeamVoteContext = useSessionStore((state) => state.setTeamVoteContext);
   const setTeamResultsSnapshot = useSessionStore((state) => state.setTeamResultsSnapshot);
   const setSessionState = useSessionStore((state) => state.setSessionState);
+  const setSessionParticipants = useSessionStore((state) => state.setSessionParticipants);
 
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [selectedOptionIds, setSelectedOptionIds] = useState<string[]>([]);
@@ -134,10 +135,14 @@ export function PlayerQuestionPage() {
         setSessionState("team-voting");
         navigate("/play/voting");
       } else if (message.type === "teamResultsPublished") {
+        if (message.participants?.length) {
+          setSessionParticipants(message.participants);
+        }
         setTeamResultsSnapshot({
           questionId: message.questionId,
           groupedAnswers: message.groupedAnswers ?? [],
           discussionQueue: message.discussionQueue ?? [],
+          participants: message.participants,
         }, message.sessionState ?? "team-results");
         setSessionState(message.sessionState ?? "team-results");
         navigate("/play/result");
@@ -155,6 +160,7 @@ export function PlayerQuestionPage() {
     updateLeaderboard,
     hasAnsweredCurrentQuestion,
     setSessionState,
+    setSessionParticipants,
     setTeamResultsSnapshot,
     setTeamVoteContext,
   ]);

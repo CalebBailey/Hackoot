@@ -16,6 +16,7 @@ export function PlayerVotingPage() {
   const setSessionState = useSessionStore((state) => state.setSessionState);
   const setTeamResultsSnapshot = useSessionStore((state) => state.setTeamResultsSnapshot);
   const updateLeaderboard = useSessionStore((state) => state.updateLeaderboard);
+  const setSessionParticipants = useSessionStore((state) => state.setSessionParticipants);
 
   const [selectedAnswerIds, setSelectedAnswerIds] = useState<string[]>([]);
   const [submitted, setSubmitted] = useState(false);
@@ -43,10 +44,14 @@ export function PlayerVotingPage() {
       if (message.type === "teamVotingClosed") {
         setSessionState("team-results");
       } else if (message.type === "teamResultsPublished") {
+        if (message.participants?.length) {
+          setSessionParticipants(message.participants);
+        }
         setTeamResultsSnapshot({
           questionId: message.questionId,
           groupedAnswers: message.groupedAnswers ?? [],
           discussionQueue: message.discussionQueue ?? [],
+          participants: message.participants,
         }, message.sessionState ?? "team-results");
         setSessionState(message.sessionState ?? "team-results");
         navigate("/play/result");
@@ -55,7 +60,7 @@ export function PlayerVotingPage() {
         navigate("/play/final");
       }
     };
-  }, [playerPeer, teamVoteContext, setSessionState, setTeamResultsSnapshot, updateLeaderboard]);
+  }, [playerPeer, teamVoteContext, setSessionParticipants, setSessionState, setTeamResultsSnapshot, updateLeaderboard]);
 
   const toggleVote = (answerId: string) => {
     if (submitted || !teamVoteContext) return;

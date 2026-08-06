@@ -34,6 +34,7 @@ export function PlayerResultPage() {
   const setSessionState = useSessionStore((state) => state.setSessionState);
   const teamResultsSnapshot = useSessionStore((state) => state.teamResultsSnapshot);
   const setTeamResultsSnapshot = useSessionStore((state) => state.setTeamResultsSnapshot);
+  const setSessionParticipants = useSessionStore((state) => state.setSessionParticipants);
 
   const [displayedPoints, setDisplayedPoints] = useState(0);
   const isTeamBuilding = resolveQuizType(session?.quizType) === "team-building";
@@ -83,10 +84,14 @@ export function PlayerResultPage() {
         );
         navigate("/play/question");
       } else if (message.type === "teamResultsPublished") {
+        if (message.participants?.length) {
+          setSessionParticipants(message.participants);
+        }
         setTeamResultsSnapshot({
           questionId: message.questionId,
           groupedAnswers: message.groupedAnswers ?? [],
           discussionQueue: message.discussionQueue ?? [],
+          participants: message.participants,
         }, message.sessionState ?? "team-results");
         setSessionState(message.sessionState ?? "team-results");
       } else if (message.type === "sessionEnded") {
@@ -99,6 +104,7 @@ export function PlayerResultPage() {
     startQuestion,
     setCurrentQuestion,
     setSessionState,
+    setSessionParticipants,
     setSessionQuizType,
     updateLeaderboard,
     setTeamResultsSnapshot,
@@ -118,6 +124,13 @@ export function PlayerResultPage() {
     teamResultsSnapshot !== null &&
     (teamResultsSnapshot.groupedAnswers.length > 0 ||
       teamResultsSnapshot.discussionQueue.length > 0);
+  const participantDirectory =
+    teamResultsSnapshot?.participants?.length
+      ? teamResultsSnapshot.participants
+      : (session?.participants.map((participant) => ({
+          participantId: participant.participantId,
+          name: participant.name,
+        })) ?? []);
 
   return (
     <div
@@ -197,11 +210,26 @@ export function PlayerResultPage() {
       {hasTeamInsights && teamResultsSnapshot && (
         <div className="space-y-4 mt-4">
           {isDiscussionRound ? (
-            <DiscussionResultsPanel items={teamResultsSnapshot.discussionQueue} title="Top selected answers" />
+              <DiscussionResultsPanel
+                items={teamResultsSnapshot.discussionQueue}
+                title="Top selected answers"
+                participants={participantDirectory}
+              />
           ) : null}
-          <ClusterView clusters={teamResultsSnapshot.groupedAnswers} title="Current grouped answers" maxItems={6} />
+            <ClusterView
+              clusters={teamResultsSnapshot.groupedAnswers}
+              title="Current grouped answers"
+              maxItems={6}
+              participants={participantDirectory}
+              showParticipantAvatars={true}
+              enableParticipantList={false}
+            />
           {!isDiscussionRound && teamResultsSnapshot.discussionQueue.length > 0 ? (
-            <DiscussionResultsPanel items={teamResultsSnapshot.discussionQueue} title="Current discussion queue" />
+              <DiscussionResultsPanel
+                items={teamResultsSnapshot.discussionQueue}
+                title="Current discussion queue"
+                participants={participantDirectory}
+              />
           ) : null}
         </div>
       )}

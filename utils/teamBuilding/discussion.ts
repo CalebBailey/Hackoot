@@ -10,11 +10,16 @@ export function buildDiscussionQueue(
   votes: RawVoteRecord[]
 ): DiscussionQueueItem[] {
   const totals = new Map<string, number>();
+  const votersByAnswerId = new Map<string, Set<string>>();
   const totalVotes = votes.reduce((sum, record) => sum + record.answerIds.length, 0);
 
   for (const vote of votes) {
     for (const answerId of vote.answerIds) {
       totals.set(answerId, (totals.get(answerId) ?? 0) + 1);
+
+      const voters = votersByAnswerId.get(answerId) ?? new Set<string>();
+      voters.add(vote.participantId);
+      votersByAnswerId.set(answerId, voters);
     }
   }
 
@@ -30,6 +35,7 @@ export function buildDiscussionQueue(
         id: candidate.id,
         text: candidate.text,
         participantIds,
+        voterParticipantIds: Array.from(votersByAnswerId.get(candidate.id) ?? []),
         voteCount,
         voteShare: totalVotes > 0 ? voteCount / totalVotes : 0,
       };

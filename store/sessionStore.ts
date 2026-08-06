@@ -11,6 +11,7 @@ import {
   TeamAnswerCluster,
   SessionState,
   TeamResultSessionState,
+  ParticipantDirectoryEntry,
 } from "../types";
 import { DEFAULT_QUESTION_TIME_LIMIT, sanitizeQuestionTimeLimit } from "@/utils/scoring";
 import { normaliseAnswer } from "@/utils/teamBuilding";
@@ -48,6 +49,7 @@ interface TeamResultsSnapshot {
   questionId: string;
   groupedAnswers: TeamAnswerCluster[];
   discussionQueue: DiscussionQueueItem[];
+  participants?: ParticipantDirectoryEntry[];
 }
 
 interface SessionStore {
@@ -72,6 +74,7 @@ interface SessionStore {
   setSessionQuizType: (quizType: QuizType) => void;
   setIsHost: (isHost: boolean) => void;
   setParticipant: (participantId: string, name: string) => void;
+  setSessionParticipants: (participants: ParticipantDirectoryEntry[]) => void;
   addParticipant: (participant: Participant) => void;
   removeParticipant: (participantId: string) => void;
   markParticipantDisconnected: (participantId: string) => void;
@@ -167,6 +170,50 @@ export const useSessionStore = create<SessionStore>((set, get) => ({
   setIsHost: (isHost) => set({ isHost }),
 
   setParticipant: (participantId, name) => set({ participantId, participantName: name }),
+
+  setSessionParticipants: (participants) => {
+    set((state) => {
+      if (!state.session) {
+        return state;
+      }
+
+      const existingById = new Map(
+        state.session.participants.map((participant) => [participant.participantId, participant])
+      );
+      const incomingIds = new Set(participants.map((participant) => participant.participantId));
+
+      const mergedParticipants = participants.map((participant) => {
+        const existingParticipant = existingById.get(participant.participantId);
+
+        if (existingParticipant) {
+          return {
+            ...existingParticipant,
+            name: participant.name,
+          };
+        }
+
+        return {
+          participantId: participant.participantId,
+          name: participant.name,
+          score: 0,
+          answeredCurrentQuestion: false,
+        };
+      });
+
+      for (const existingParticipant of state.session.participants) {
+        if (!incomingIds.has(existingParticipant.participantId)) {
+          mergedParticipants.push(existingParticipant);
+        }
+      }
+
+      return {
+        session: {
+          ...state.session,
+          participants: mergedParticipants,
+        },
+      };
+    });
+  },
 
   addParticipant: (participant) => {
     set((state) => {

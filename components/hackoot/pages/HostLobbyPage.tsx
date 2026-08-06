@@ -102,6 +102,10 @@ export function HostLobbyPage({ quizId }: HostLobbyPageProps) {
           sessionState: updatedSession.state,
           quizType: updatedSession.quizType,
           score: existingParticipant.score,
+          participants: updatedSession.participants.map((participant) => ({
+            participantId: participant.participantId,
+            name: participant.name,
+          })),
           leaderboard,
           ...((updatedSession.state === "question" || updatedSession.state === "team-submission") && currentQuestion
             ? {

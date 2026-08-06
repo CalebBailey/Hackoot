@@ -9,6 +9,7 @@ import { Leaderboard } from "../Leaderboard";
 import { ClusterView } from "../ClusterView";
 import { DiscussionQueue } from "../DiscussionQueue";
 import { DiscussionResultsPanel } from "../DiscussionResultsPanel";
+import { ParticipantAvatarStack } from "../ParticipantAvatarStack";
 import { navigate } from "../HackootApp";
 import { ArrowRight, Trophy, Vote } from "lucide-react";
 import { HostPeer } from "@/transport/peer";
@@ -140,6 +141,10 @@ export function HostResultsPage({ quizId }: HostResultsPageProps) {
   const quizType = resolveQuizType(quiz?.quizType);
   const isTeamBuilding = quizType === "team-building";
   const selectableChoices = currentQuestion ? getSelectableChoices(currentQuestion) : [];
+  const participantDirectory = session?.participants.map((participant) => ({
+    participantId: participant.participantId,
+    name: participant.name,
+  })) ?? [];
 
   useEffect(() => {
     if (!quiz || !session || !hostPeer || !currentQuestion || revealed) {
@@ -185,11 +190,13 @@ export function HostResultsPage({ quizId }: HostResultsPageProps) {
         questionId: currentQuestion.id,
         groupedAnswers: resultSnapshot.groupedAnswers,
         discussionQueue: [],
+        participants: participantDirectory,
       }, "team-results");
       hostPeer.broadcast({
         type: "teamResultsPublished",
         questionId: currentQuestion.id,
         groupedAnswers: resultSnapshot.groupedAnswers,
+        participants: participantDirectory,
         sessionState: "team-results",
       });
       setSessionState("team-results");
@@ -265,6 +272,7 @@ export function HostResultsPage({ quizId }: HostResultsPageProps) {
       questionId: currentQuestion.id,
       groupedAnswers: resultSnapshot.groupedAnswers,
       discussionQueue,
+      participants: participantDirectory,
     }, "team-discussion");
 
     hostPeer.broadcast({
@@ -276,6 +284,7 @@ export function HostResultsPage({ quizId }: HostResultsPageProps) {
       questionId: currentQuestion.id,
       groupedAnswers: resultSnapshot.groupedAnswers,
       discussionQueue,
+      participants: participantDirectory,
       sessionState: "team-discussion",
     });
 
@@ -346,11 +355,27 @@ export function HostResultsPage({ quizId }: HostResultsPageProps) {
                 <p className="text-sm text-[var(--text-secondary)]">No submissions received for this discussion question.</p>
               ) : (
                 <ol className="space-y-2">
-                  {discussionCandidates.map((candidate) => (
-                    <li key={candidate.id} className="text-sm text-[var(--text-primary)] bg-white/[0.03] border border-white/10 rounded-lg px-3 py-2">
-                      {candidate.text}
-                    </li>
-                  ))}
+                  {discussionCandidates.map((candidate) => {
+                    const contributorIds = candidate.participantIds?.length
+                      ? candidate.participantIds
+                      : [candidate.participantId];
+
+                    return (
+                      <li
+                        key={candidate.id}
+                        className="text-sm text-[var(--text-primary)] bg-white/[0.03] border border-white/10 rounded-lg px-3 py-2"
+                      >
+                        <div className="flex items-center justify-between gap-3">
+                          <span className="min-w-0 break-words">{candidate.text}</span>
+                          <ParticipantAvatarStack
+                            participantIds={contributorIds}
+                            participants={participantDirectory}
+                            maxVisible={4}
+                          />
+                        </div>
+                      </li>
+                    );
+                  })}
                 </ol>
               )}
             </div>
@@ -362,11 +387,21 @@ export function HostResultsPage({ quizId }: HostResultsPageProps) {
                 <DiscussionResultsPanel
                   items={session.teamDiscussionQueue?.[currentQuestion.id] ?? []}
                   title="Discussion round - no timer"
+                  participants={participantDirectory}
+                  enableParticipantList={true}
                 />
               ) : null}
-              <ClusterView clusters={teamResults.groupedAnswers} />
+              <ClusterView
+                clusters={teamResults.groupedAnswers}
+                participants={participantDirectory}
+                showParticipantAvatars={true}
+              />
               {currentQuestion.type !== "discussion" && session.teamDiscussionQueue?.[currentQuestion.id]?.length ? (
-                <DiscussionQueue items={session.teamDiscussionQueue[currentQuestion.id]} />
+                <DiscussionQueue
+                  items={session.teamDiscussionQueue[currentQuestion.id]}
+                  participants={participantDirectory}
+                  enableParticipantList={true}
+                />
               ) : null}
             </>
           )}

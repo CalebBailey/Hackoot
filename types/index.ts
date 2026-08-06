@@ -113,10 +113,16 @@ export interface TeamAnswerCluster {
   count: number;
 }
 
+export interface ParticipantDirectoryEntry {
+  participantId: string;
+  name: string;
+}
+
 export interface DiscussionQueueItem {
   id: string;
   text: string;
   participantIds: string[];
+  voterParticipantIds?: string[];
   voteCount: number;
   voteShare: number;
   hidden?: boolean;
@@ -206,6 +212,7 @@ export type PeerMessage =
       questionId: string;
       groupedAnswers?: TeamAnswerCluster[];
       discussionQueue?: DiscussionQueueItem[];
+      participants?: ParticipantDirectoryEntry[];
       sessionState?: TeamResultSessionState;
     }
   | { type: "teamDiscussionItemOpened"; questionId: string; item: DiscussionQueueItem }
@@ -234,5 +241,7 @@ export type PeerMessage =
         questionId: string;
         groupedAnswers: TeamAnswerCluster[];
         discussionQueue: DiscussionQueueItem[];
+        participants?: ParticipantDirectoryEntry[];
       };
+      participants?: ParticipantDirectoryEntry[];
     };

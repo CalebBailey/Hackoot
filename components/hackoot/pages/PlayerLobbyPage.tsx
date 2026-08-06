@@ -34,6 +34,7 @@ export function PlayerLobbyPage() {
   const setSessionQuizType = useSessionStore((state) => state.setSessionQuizType);
   const setTeamVoteContext = useSessionStore((state) => state.setTeamVoteContext);
   const setTeamResultsSnapshot = useSessionStore((state) => state.setTeamResultsSnapshot);
+  const setSessionParticipants = useSessionStore((state) => state.setSessionParticipants);
 
   const [participants, setParticipants] = useState<{ id: string; name: string }[]>([]);
 
@@ -48,6 +49,12 @@ export function PlayerLobbyPage() {
     playerPeer.onMessage = (message: PeerMessage) => {
       if (message.type === "lobbyUpdate") {
         setParticipants(message.participants);
+        setSessionParticipants(
+          message.participants.map((participant) => ({
+            participantId: participant.id,
+            name: participant.name,
+          }))
+        );
       } else if (message.type === "questionStarted") {
         const runtimeQuestion = toRuntimeQuestion(message);
         if (!runtimeQuestion) return;
@@ -63,6 +70,10 @@ export function PlayerLobbyPage() {
         );
         navigate("/play/question");
       } else if (message.type === "rejoinAck" && message.participantId === participantId) {
+        if (message.participants?.length) {
+          setSessionParticipants(message.participants);
+        }
+
         if (message.quizType) {
           setSessionQuizType(message.quizType);
         }
@@ -117,6 +128,7 @@ export function PlayerLobbyPage() {
     setHasAnsweredCurrentQuestion,
     setSessionState,
     setSessionQuizType,
+    setSessionParticipants,
     setTeamVoteContext,
     setTeamResultsSnapshot,
     updateLeaderboard,
