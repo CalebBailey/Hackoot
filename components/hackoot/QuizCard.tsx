@@ -5,6 +5,7 @@ import { Button } from "./Button";
 import { Pencil, Play, Trash2, Download } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { exportQuiz } from "@/utils/quizStorage";
+import { resolveQuizType } from "@/utils/teamBuilding";
 
 interface QuizCardProps {
   quiz: Quiz;
@@ -18,12 +19,25 @@ export function QuizCard({ quiz, onEdit, onStart, onDelete }: QuizCardProps) {
     exportQuiz(quiz);
   };
 
+  const quizType = resolveQuizType(quiz.quizType);
+
   return (
     <div className="glass-card p-5 flex flex-col gap-4 fade-in">
       <div className="flex-1">
-        <h3 className="text-lg font-heading font-bold text-[var(--text-primary)] line-clamp-2">
-          {quiz.title}
-        </h3>
+        <div className="flex items-start justify-between gap-2">
+          <h3 className="text-lg font-heading font-bold text-[var(--text-primary)] line-clamp-2">
+            {quiz.title}
+          </h3>
+          <span
+            className={`text-[11px] px-2 py-0.5 rounded-full border shrink-0 ${
+              quizType === "team-building"
+                ? "bg-[var(--color-action)]/15 border-[var(--color-action)]/35 text-[var(--text-primary)]"
+                : "bg-white/10 border-white/15 text-[var(--text-secondary)]"
+            }`}
+          >
+            {quizType === "team-building" ? "Team Building" : "Standard"}
+          </span>
+        </div>
         {quiz.description && (
           <p className="text-sm text-[var(--text-secondary)] mt-1 line-clamp-2">
             {quiz.description}

@@ -75,7 +75,7 @@ export function JoinPage({ initialRoomCode }: JoinPageProps) {
       (window as any).__hackootPlayerPeer = playerPeer;
       setParticipant(participantId, name.trim());
       setIsHost(false);
-      initSession(generateUUID(), "", upperRoomCode);
+      initSession(generateUUID(), "", upperRoomCode, "standard");
 
       navigate("/play/lobby");
     } catch (err) {

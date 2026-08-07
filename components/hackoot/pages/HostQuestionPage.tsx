@@ -10,6 +10,7 @@ import { navigate } from "../HackootApp";
 import { Users, Eye, Zap } from "lucide-react";
 import { HostPeer } from "@/transport/peer";
 import { calculateKahootPoints, getResponseTime, sanitizeQuestionTimeLimit } from "@/utils/scoring";
+import { getSelectableChoices, resolveQuizType } from "@/utils/teamBuilding";
 
 interface HostQuestionPageProps {
   quizId: string;
@@ -22,6 +23,10 @@ export function HostQuestionPage({ quizId }: HostQuestionPageProps) {
   const session = useSessionStore((state) => state.session);
   const startQuestion = useSessionStore((state) => state.startQuestion);
   const recordAnswer = useSessionStore((state) => state.recordAnswer);
+  const recordTeamChoiceAnswer = useSessionStore((state) => state.recordTeamChoiceAnswer);
+  const recordTeamTextAnswers = useSessionStore((state) => state.recordTeamTextAnswers);
+  const discussionIntroParticipantIds = useSessionStore((state) => state.discussionIntroParticipantIds);
+  const setSessionState = useSessionStore((state) => state.setSessionState);
 
   const [timerRunning, setTimerRunning] = useState(false);
   const [canReveal, setCanReveal] = useState(false);
@@ -34,6 +39,8 @@ export function HostQuestionPage({ quizId }: HostQuestionPageProps) {
   const currentQuestionIndex = session?.currentQuestionIndex ?? 0;
   const currentQuestion = quiz?.questions[currentQuestionIndex];
   const questionDuration = sanitizeQuestionTimeLimit(currentQuestion?.timeLimit);
+  const quizType = resolveQuizType(quiz?.quizType);
+  const isTeamBuilding = quizType === "team-building";
 
   useEffect(() => {
     if (!quiz || !session || !hostPeer || initialized) {
@@ -49,18 +56,25 @@ export function HostQuestionPage({ quizId }: HostQuestionPageProps) {
       return;
     }
 
-    startQuestion(currentQuestionIndex, question, questionDuration);
+    const introParticipantIds: string[] = [];
+
+    startQuestion(currentQuestionIndex, question, questionDuration, introParticipantIds);
     questionStartTimeRef.current = Date.now();
     setTimerRunning(true);
     setCanReveal(false);
     setInitialized(true);
 
     // Broadcast question to players (without correct answers)
-    hostPeer.broadcastQuestion(question, currentQuestionIndex, quiz.questions.length);
+    hostPeer.broadcastQuestion(question, currentQuestionIndex, quiz.questions.length, introParticipantIds);
 
     // Handle incoming answers with Kahoot scoring
     hostPeer.onAnswerReceived = (participantId, questionId, choiceId, submittedAt) => {
+      if (isTeamBuilding) {
+        return;
+      }
+
       if (questionId !== question.id) return;
+      if (question.type !== "mcq") return;
 
       const responseTime = getResponseTime(questionStartTimeRef.current, submittedAt);
       const correct = question.correctChoiceIds.includes(choiceId);
@@ -68,7 +82,36 @@ export function HostQuestionPage({ quizId }: HostQuestionPageProps) {
 
       recordAnswer(participantId, questionId, choiceId, submittedAt, correct, points);
     };
-  }, [quiz, session, hostPeer, currentQuestionIndex, startQuestion, recordAnswer, initialized, questionDuration]);
+
+    hostPeer.onChoiceAnswerReceived = (participantId, questionId, choiceId, submittedAt) => {
+      if (!isTeamBuilding) {
+        return;
+      }
+      if (questionId !== question.id) return;
+      recordTeamChoiceAnswer(participantId, questionId, choiceId, submittedAt);
+    };
+
+    hostPeer.onTextAnswersReceived = (participantId, questionId, answers, submittedAt) => {
+      if (!isTeamBuilding) {
+        return;
+      }
+      if (questionId !== question.id) return;
+      const cleanedAnswers = answers.map((answer) => answer.trim()).filter(Boolean);
+      recordTeamTextAnswers(participantId, questionId, cleanedAnswers, submittedAt);
+    };
+  }, [
+    quiz,
+    session,
+    hostPeer,
+    currentQuestionIndex,
+    startQuestion,
+    recordAnswer,
+    recordTeamChoiceAnswer,
+    recordTeamTextAnswers,
+    initialized,
+    questionDuration,
+    isTeamBuilding,
+  ]);
 
   // Reset initialized when navigating to a new question
   useEffect(() => {
@@ -80,12 +123,21 @@ export function HostQuestionPage({ quizId }: HostQuestionPageProps) {
   // Check if all players have answered
   useEffect(() => {
     if (!session) return;
-    const allAnswered = session.participants.every((p) => p.answeredCurrentQuestion);
-    if (allAnswered && session.participants.length > 0) {
+    const introParticipants =
+      isTeamBuilding && currentQuestion?.type === "discussion" && discussionIntroParticipantIds.length > 0
+        ? session.participants.filter((participant) => discussionIntroParticipantIds.includes(participant.participantId))
+        : session.participants;
+    const allAnswered = introParticipants.length > 0 && introParticipants.every((participant) => participant.answeredCurrentQuestion);
+    if (allAnswered) {
       setCanReveal(true);
       setTimerRunning(false);
     }
-  }, [session?.participants]);
+  }, [
+    currentQuestion?.type,
+    discussionIntroParticipantIds,
+    isTeamBuilding,
+    session?.participants,
+  ]);
 
   const handleTimerExpire = useCallback(() => {
     setTimerRunning(false);
@@ -93,6 +145,15 @@ export function HostQuestionPage({ quizId }: HostQuestionPageProps) {
   }, []);
 
   const handleReveal = () => {
+    if (isTeamBuilding && session && currentQuestion) {
+      const submissionCount = session.answers.filter((answer) => answer.questionId === currentQuestion.id).length;
+      hostPeer?.broadcast({
+        type: "teamSubmissionClosed",
+        questionId: currentQuestion.id,
+        submissionCount,
+      });
+      setSessionState(currentQuestion.type === "discussion" ? "team-voting" : "team-results");
+    }
     navigate(`/host/${quizId}/results`);
   };
 
@@ -100,13 +161,22 @@ export function HostQuestionPage({ quizId }: HostQuestionPageProps) {
     return null;
   }
 
-  const answeredCount = session.participants.filter((p) => p.answeredCurrentQuestion).length;
-  const totalCount = session.participants.length;
+  const introParticipants =
+    isTeamBuilding && currentQuestion.type === "discussion" && discussionIntroParticipantIds.length > 0
+      ? session.participants.filter((participant) => discussionIntroParticipantIds.includes(participant.participantId))
+      : session.participants;
+  const answeredCount = introParticipants.filter((participant) => participant.answeredCurrentQuestion).length;
+  const totalCount = introParticipants.length;
 
-  const isDoublePoints = currentQuestion.doublePoints ?? false;
+  const isDoublePoints = currentQuestion.type === "mcq" ? (currentQuestion.doublePoints ?? false) : false;
+  const selectableChoices = getSelectableChoices(currentQuestion);
 
   return (
-    <div className="h-screen overflow-hidden flex flex-col px-4 py-3 max-w-3xl mx-auto">
+    <div
+      className={`flex flex-col px-4 py-3 max-w-3xl mx-auto ${
+        isTeamBuilding ? "min-h-screen overflow-y-auto" : "h-screen overflow-hidden"
+      }`}
+    >
       {isDoublePoints && <div className="double-points-vignette" aria-hidden="true" />}
 
       {/* Header - CSS grid keeps timer pixel-perfect centred */}
@@ -155,7 +225,15 @@ export function HostQuestionPage({ quizId }: HostQuestionPageProps) {
 
       {/* Answer Grid */}
       <div className="flex justify-center mb-3">
-        <AnswerGrid choices={currentQuestion.choices} locked={true} />
+        {selectableChoices.length > 0 ? (
+          <AnswerGrid choices={selectableChoices} locked={true} />
+        ) : (
+          <div className="w-full glass-card p-4 text-center text-[var(--text-secondary)] text-sm">
+            {isTeamBuilding && currentQuestion.type === "discussion"
+              ? "Awaiting discussion prompts from players"
+              : "Awaiting free-text responses from players"}
+          </div>
+        )}
       </div>
 
       {/* Progress Bar */}
@@ -175,7 +253,13 @@ export function HostQuestionPage({ quizId }: HostQuestionPageProps) {
       {/* Reveal Button */}
       <Button variant="primary" size="lg" fullWidth onClick={handleReveal} disabled={!canReveal}>
         <Eye className="w-5 h-5 mr-2" />
-        {canReveal ? "Reveal Answers" : "Waiting for responses..."}
+        {canReveal
+          ? isTeamBuilding
+            ? currentQuestion.type === "discussion"
+              ? "Open Voting"
+              : "Show Team Results"
+            : "Reveal Answers"
+          : "Waiting for responses..."}
       </Button>
     </div>
   );

@@ -7,6 +7,8 @@ import { navigate } from "../HackootApp";
 import { Trophy, Download, Home, Medal } from "lucide-react";
 import { exportSessionResults } from "@/utils/quizStorage";
 import { clearPlayerSession } from "@/utils/playerSession";
+import { resolveQuizType } from "@/utils/teamBuilding";
+import { InterestMatchGraph } from "../InterestMatchGraph";
 
 // Delays (ms) for each place to begin animating - 3rd first, 2nd second, 1st last
 const PODIUM_DELAYS = { third: 0, second: 700, first: 1400 };
@@ -28,6 +30,7 @@ export function FinalLeaderboardPage() {
   const [firstCardVisible, setFirstCardVisible] = useState(false);
 
   const leaderboard = getLeaderboard();
+  const isTeamBuilding = resolveQuizType(session?.quizType) === "team-building";
 
   useEffect(() => {
     const timers: ReturnType<typeof setTimeout>[] = [];
@@ -46,9 +49,13 @@ export function FinalLeaderboardPage() {
       {
         sessionId: session.sessionId,
         roomCode: session.roomCode,
+        quizType: resolveQuizType(session.quizType),
         participants: session.participants,
         answers: session.answers,
         leaderboard,
+        teamClusters: session.teamClusters,
+        teamDiscussionQueue: session.teamDiscussionQueue,
+        teamQuestionPrompts: session.teamQuestionPrompts,
         endedAt: new Date().toISOString(),
       },
       session.quizId || "hackoot-results"
@@ -69,6 +76,7 @@ export function FinalLeaderboardPage() {
 
   const top3 = leaderboard.slice(0, 3);
   const rest = leaderboard.slice(3);
+  const totalResponses = session?.answers.length ?? 0;
 
   return (
     <div className="container mx-auto px-4 py-8 max-w-2xl">
@@ -76,12 +84,55 @@ export function FinalLeaderboardPage() {
       <div className="text-center mb-8">
         <Trophy className="w-16 h-16 mx-auto mb-4 text-[#F59E0B]" />
         <h1 className="text-3xl sm:text-4xl font-heading font-bold text-[var(--text-primary)]">
-          Final Results
+          {isTeamBuilding ? "Session Summary" : "Final Results"}
         </h1>
       </div>
 
-      {/* Podium - rendered in visual order: 2nd | 1st | 3rd, but 3rd animates first */}
-      {top3.length > 0 && (
+      {isTeamBuilding ? (
+        <div className="glass-card p-6 mb-8">
+          <p className="text-[var(--text-secondary)] mb-4">
+            Team Building session complete.
+          </p>
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <p className="text-sm text-[var(--text-secondary)]">Participants</p>
+              <p className="text-2xl font-bold text-[var(--text-primary)]">{session?.participants.length ?? 0}</p>
+            </div>
+            <div>
+              <p className="text-sm text-[var(--text-secondary)]">Total responses</p>
+              <p className="text-2xl font-bold text-[var(--text-primary)]">{totalResponses}</p>
+            </div>
+          </div>
+
+          {session?.participants.length ? (
+            <div className="mt-5 space-y-2">
+              {session.participants.map((participant) => (
+                <div
+                  key={participant.participantId}
+                  className="px-3 py-2 rounded-lg bg-white/[0.03] border border-white/10 text-[var(--text-primary)]"
+                >
+                  {participant.name}
+                </div>
+              ))}
+            </div>
+          ) : null}
+
+          {session?.participants.length ? (
+            <div className="mt-6">
+              <InterestMatchGraph
+                participants={session.participants}
+                clustersByQuestion={session.teamClusters}
+                questionPrompts={session.teamQuestionPrompts}
+                currentParticipantId={participantId}
+                title="People you matched with"
+                maxVisibleMatches={6}
+              />
+            </div>
+          ) : null}
+        </div>
+      ) : (
+        /* Podium - rendered in visual order: 2nd | 1st | 3rd, but 3rd animates first */
+        top3.length > 0 && (
         <div className="flex justify-center items-end gap-3 sm:gap-5 mb-8">
 
           {/* 2nd place */}
@@ -148,10 +199,11 @@ export function FinalLeaderboardPage() {
           )}
 
         </div>
+        )
       )}
 
       {/* Rest of leaderboard */}
-      {rest.length > 0 && (
+      {!isTeamBuilding && rest.length > 0 && (
         <div className="glass-card p-4 mb-8">
           <div className="space-y-2">
             {rest.map((entry) => (

@@ -10,6 +10,7 @@ interface AnswerGridProps {
   selectedId?: string;
   locked?: boolean;
   revealedCorrectIds?: string[];
+  showChoiceText?: boolean;
 }
 
 const COLORS = [
@@ -19,7 +20,13 @@ const COLORS = [
   { bg: "bg-[#3B82F6]", name: "blue" },    // D - bottom-right
 ];
 
-const LABELS = ["A", "B", "C", "D"];
+function getChoiceLabel(index: number): string {
+  if (index >= 0 && index < 26) {
+    return String.fromCharCode(65 + index);
+  }
+
+  return `${index + 1}`;
+}
 
 export function AnswerGrid({
   choices,
@@ -27,8 +34,10 @@ export function AnswerGrid({
   selectedId,
   locked,
   revealedCorrectIds,
+  showChoiceText = true,
 }: AnswerGridProps) {
   const isRevealed = revealedCorrectIds && revealedCorrectIds.length > 0;
+  const isLetterOnly = !showChoiceText;
 
   return (
     <div 
@@ -39,7 +48,8 @@ export function AnswerGrid({
       {choices.map((choice, index) => {
         const isSelected = selectedId === choice.id;
         const isCorrect = revealedCorrectIds?.includes(choice.id);
-        const color = COLORS[index] || COLORS[0];
+        const color = COLORS[index % COLORS.length];
+        const choiceLabel = getChoiceLabel(index);
 
         return (
           <button
@@ -47,7 +57,10 @@ export function AnswerGrid({
             onClick={() => !locked && onSelect?.(choice.id)}
             disabled={locked && !isRevealed}
             className={cn(
-              "relative p-4 sm:p-6 rounded-xl text-white font-semibold text-lg sm:text-xl transition-all duration-200",
+              "relative rounded-xl text-white font-semibold transition-all duration-200",
+              showChoiceText
+                ? "p-4 sm:p-6 text-lg sm:text-xl text-left"
+                : "p-6 sm:p-8 min-h-[124px] sm:min-h-[140px] flex items-center justify-center",
               color.bg,
               !locked && "hover:scale-[1.02] active:scale-[0.98]",
               locked && isSelected && "scale-[0.97]",
@@ -56,12 +69,25 @@ export function AnswerGrid({
               isRevealed && !isCorrect && "opacity-60"
             )}
             aria-pressed={isSelected}
-            aria-label={`Answer ${LABELS[index]}: ${choice.text}`}
+            aria-label={showChoiceText ? `Answer ${choiceLabel}: ${choice.text}` : `Answer ${choiceLabel}`}
           >
-            <span className="absolute top-2 left-3 text-sm font-bold opacity-70">
-              {LABELS[index]}
-            </span>
-            <span className="block mt-2">{choice.text}</span>
+            {showChoiceText ? (
+              <>
+                <span className="absolute top-3 left-3 inline-flex h-8 w-8 items-center justify-center rounded-md border border-white/35 bg-black/30 text-base font-black leading-none shadow-sm">
+                  {choiceLabel}
+                </span>
+                <span className="block mt-8">{choice.text}</span>
+              </>
+            ) : (
+              <span
+                className={cn(
+                  "font-black leading-none tracking-tight text-white drop-shadow-[0_2px_6px_rgba(0,0,0,0.35)]",
+                  isLetterOnly ? "text-5xl sm:text-6xl" : "text-4xl sm:text-5xl"
+                )}
+              >
+                {choiceLabel}
+              </span>
+            )}
             
             {/* Selected indicator */}
             {locked && isSelected && !isRevealed && (

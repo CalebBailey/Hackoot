@@ -1,5 +1,5 @@
 import Pusher, { Channel } from "pusher-js";
-import { PeerMessage, Question } from "../types";
+import { PeerMessage, PublicQuestion, Question } from "../types";
 import { sanitizeQuestionTimeLimit } from "@/utils/scoring";
 
 // No longer needed - Pusher works in all modern browsers without WebRTC
@@ -35,6 +35,9 @@ export class HostPeer {
 
   public onPlayerJoin: ((participantId: string, name: string) => void) | null = null;
   public onAnswerReceived: ((participantId: string, questionId: string, choiceId: string, submittedAt: number) => void) | null = null;
+  public onChoiceAnswerReceived: ((participantId: string, questionId: string, choiceId: string, submittedAt: number) => void) | null = null;
+  public onTextAnswersReceived: ((participantId: string, questionId: string, answers: string[], submittedAt: number) => void) | null = null;
+  public onDiscussionVotesReceived: ((participantId: string, questionId: string, answerIds: string[], submittedAt: number) => void) | null = null;
   public onError: ((error: string) => void) | null = null;
   public onPlayerDisconnect: ((participantId: string) => void) | null = null;
 
@@ -68,6 +71,18 @@ export class HostPeer {
         this.onAnswerReceived?.(data.participantId, data.questionId, data.choiceId, data.submittedAt);
       });
 
+      this.channel.bind("player-choice-answer", (data: { participantId: string; questionId: string; choiceId: string; submittedAt: number }) => {
+        this.onChoiceAnswerReceived?.(data.participantId, data.questionId, data.choiceId, data.submittedAt);
+      });
+
+      this.channel.bind("player-text-answers", (data: { participantId: string; questionId: string; answers: string[]; submittedAt: number }) => {
+        this.onTextAnswersReceived?.(data.participantId, data.questionId, data.answers, data.submittedAt);
+      });
+
+      this.channel.bind("player-discussion-votes", (data: { participantId: string; questionId: string; answerIds: string[]; submittedAt: number }) => {
+        this.onDiscussionVotesReceived?.(data.participantId, data.questionId, data.answerIds, data.submittedAt);
+      });
+
       this.pusher.connection.bind("error", (err: unknown) => {
         const msg = (err as { error?: { data?: { message?: string } } })?.error?.data?.message ?? "Unknown connection error";
         this.onError?.(`Connection error: ${msg}`);
@@ -81,16 +96,29 @@ export class HostPeer {
     });
   }
 
-  broadcastQuestion(question: Question, questionIndex: number, totalQuestions: number): void {
-    const { correctChoiceIds, ...safeQuestion } = question;
+  private toPublicQuestion(question: Question): PublicQuestion {
+    if (question.type === "mcq") {
+      const { correctChoiceIds, ...safeQuestion } = question;
+      return safeQuestion;
+    }
+    return question;
+  }
+
+  broadcastQuestion(
+    question: Question,
+    questionIndex: number,
+    totalQuestions: number,
+    discussionIntroParticipantIds: string[] = []
+  ): void {
     this.broadcast({
       type: "questionStarted",
-      question: safeQuestion,
+      question: this.toPublicQuestion(question),
       questionIndex,
       totalQuestions,
       startedAt: Date.now(),
-      doublePoints: question.doublePoints ?? false,
+      doublePoints: question.type === "mcq" ? (question.doublePoints ?? false) : false,
       questionDuration: sanitizeQuestionTimeLimit(question.timeLimit),
+      discussionIntroParticipantIds,
     });
   }
 
@@ -150,8 +178,14 @@ export class PlayerPeer {
         "lobbyUpdate",
         "questionStarted",
         "answerRevealed",
+        "teamSubmissionClosed",
+        "teamVotingOpened",
+        "teamVotingClosed",
+        "teamResultsPublished",
+        "teamDiscussionItemOpened",
         "sessionEnded",
         "error",
+        "rejoinAck",
       ];
 
       for (const event of hostEvents) {
@@ -172,15 +206,52 @@ export class PlayerPeer {
   }
 
   send(message: PeerMessage): void {
-    if (message.type !== "submitAnswer") return;
-    triggerEvent(`private-hackoot-host-${this.roomCode}`, "player-answer", {
-      participantId: message.participantId,
-      questionId: message.questionId,
-      choiceId: message.choiceId,
-      submittedAt: message.submittedAt,
-    }).catch(() => {
-      this.onError?.("Failed to submit answer - check your network connection");
-    });
+    if (message.type === "submitAnswer") {
+      triggerEvent(`private-hackoot-host-${this.roomCode}`, "player-answer", {
+        participantId: message.participantId,
+        questionId: message.questionId,
+        choiceId: message.choiceId,
+        submittedAt: message.submittedAt,
+      }).catch(() => {
+        this.onError?.("Failed to submit answer - check your network connection");
+      });
+      return;
+    }
+
+    if (message.type === "submitChoiceAnswer") {
+      triggerEvent(`private-hackoot-host-${this.roomCode}`, "player-choice-answer", {
+        participantId: message.participantId,
+        questionId: message.questionId,
+        choiceId: message.choiceId,
+        submittedAt: message.submittedAt,
+      }).catch(() => {
+        this.onError?.("Failed to submit answer - check your network connection");
+      });
+      return;
+    }
+
+    if (message.type === "submitTextAnswers") {
+      triggerEvent(`private-hackoot-host-${this.roomCode}`, "player-text-answers", {
+        participantId: message.participantId,
+        questionId: message.questionId,
+        answers: message.answers,
+        submittedAt: message.submittedAt,
+      }).catch(() => {
+        this.onError?.("Failed to submit response - check your network connection");
+      });
+      return;
+    }
+
+    if (message.type === "submitDiscussionVotes") {
+      triggerEvent(`private-hackoot-host-${this.roomCode}`, "player-discussion-votes", {
+        participantId: message.participantId,
+        questionId: message.questionId,
+        answerIds: message.answerIds,
+        submittedAt: message.submittedAt,
+      }).catch(() => {
+        this.onError?.("Failed to submit votes - check your network connection");
+      });
+    }
   }
 
   disconnect(): void {

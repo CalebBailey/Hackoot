@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { Quiz } from "@/types";
+import { DEFAULT_TEAM_BUILDING_SETTINGS } from "@/utils/teamBuilding";
 
 const mockSaveQuiz = vi.fn();
 const mockLoadAllQuizzes = vi.fn();
@@ -49,13 +50,41 @@ describe("quizStore", () => {
     expect(store.getState().quizzes).toHaveLength(1);
   });
 
-  it("creates and stores a quiz", async () => {
+  it("creates and stores a standard quiz with defaults", async () => {
     const store = await getStore();
 
     store.getState().createQuiz(baseQuiz);
 
-    expect(mockSaveQuiz).toHaveBeenCalledWith(baseQuiz);
+    expect(mockSaveQuiz).toHaveBeenCalledTimes(1);
+    expect(mockSaveQuiz).toHaveBeenCalledWith({
+      ...baseQuiz,
+      quizType: "standard",
+      teamBuildingSettings: undefined,
+    });
     expect(store.getState().quizzes[0].quizId).toBe("q1");
+  });
+
+  it("creates and stores a team-building quiz with default settings", async () => {
+    const store = await getStore();
+
+    const teamQuiz: Quiz = {
+      ...baseQuiz,
+      quizId: "q-team",
+      quizType: "team-building",
+      teamBuildingSettings: undefined,
+    };
+
+    store.getState().createQuiz(teamQuiz);
+
+    expect(mockSaveQuiz).toHaveBeenCalledTimes(1);
+    expect(mockSaveQuiz).toHaveBeenCalledWith({
+      ...teamQuiz,
+      teamBuildingSettings: DEFAULT_TEAM_BUILDING_SETTINGS,
+    });
+
+    const [storedQuiz] = store.getState().quizzes;
+    expect(storedQuiz.quizType).toBe("team-building");
+    expect(storedQuiz.teamBuildingSettings).toEqual(DEFAULT_TEAM_BUILDING_SETTINGS);
   });
 
   it("updates a quiz by id", async () => {
@@ -85,6 +114,26 @@ describe("quizStore", () => {
     const [imported] = store.getState().quizzes;
     expect(imported.quizId).toBe("generated-uuid");
     expect(imported.version).toBe(1);
+    expect(imported.quizType).toBe("standard");
+    expect(imported.teamBuildingSettings).toBeUndefined();
     expect(mockSaveQuiz).toHaveBeenCalled();
+  });
+
+  it("imports a team-building quiz and normalises defaults", async () => {
+    const store = await getStore();
+
+    const teamQuiz: Quiz = {
+      ...baseQuiz,
+      quizId: "team-import",
+      quizType: "team-building",
+      teamBuildingSettings: undefined,
+    };
+
+    store.getState().importQuiz(teamQuiz);
+
+    const [imported] = store.getState().quizzes;
+    expect(imported.quizId).toBe("generated-uuid");
+    expect(imported.quizType).toBe("team-building");
+    expect(imported.teamBuildingSettings).toEqual(DEFAULT_TEAM_BUILDING_SETTINGS);
   });
 });

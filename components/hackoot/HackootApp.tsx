@@ -10,6 +10,7 @@ import { HostResultsPage } from "./pages/HostResultsPage";
 import { JoinPage } from "./pages/JoinPage";
 import { PlayerLobbyPage } from "./pages/PlayerLobbyPage";
 import { PlayerQuestionPage } from "./pages/PlayerQuestionPage";
+import { PlayerVotingPage } from "./pages/PlayerVotingPage";
 import { PlayerResultPage } from "./pages/PlayerResultPage";
 import { FinalLeaderboardPage } from "./pages/FinalLeaderboardPage";
 import { useQuizStore } from "@/store/quizStore";
@@ -24,6 +25,7 @@ type Route =
   | { name: "join"; roomCode?: string }
   | { name: "play-lobby" }
   | { name: "play-question" }
+  | { name: "play-voting" }
   | { name: "play-result" }
   | { name: "play-final" };
 
@@ -51,6 +53,7 @@ function parseHash(hash: string): Route {
   if (path === "join") return { name: "join" };
   if (path === "play/lobby") return { name: "play-lobby" };
   if (path === "play/question") return { name: "play-question" };
+  if (path === "play/voting") return { name: "play-voting" };
   if (path === "play/result") return { name: "play-result" };
   if (path === "play/final") return { name: "play-final" };
   
@@ -99,6 +102,8 @@ export function HackootApp() {
         return <PlayerLobbyPage />;
       case "play-question":
         return <PlayerQuestionPage />;
+      case "play-voting":
+        return <PlayerVotingPage />;
       case "play-result":
         return <PlayerResultPage />;
       case "play-final":

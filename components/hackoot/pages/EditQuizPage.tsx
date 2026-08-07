@@ -3,54 +3,49 @@
 import { useState, useEffect } from "react";
 import { useQuizStore } from "@/store/quizStore";
 import { Button } from "../Button";
+import { Checkbox } from "@/components/ui/checkbox";
 import { QuestionEditor } from "../QuestionEditor";
 import { navigate } from "../HackootApp";
-import { ArrowLeft, Plus, Save, Download, AlertCircle } from "lucide-react";
-import { Quiz, Question } from "@/types";
-import { exportQuiz } from "@/utils/quizStorage";
+import { ArrowLeft, Plus, Minus, Save, Download, AlertCircle } from "lucide-react";
+import { Choice, Quiz, Question, QuizType, TeamBuildingQuizSettings } from "@/types";
 import { generateUUID } from "@/lib/utils";
-import { DEFAULT_QUESTION_TIME_LIMIT, sanitizeQuestionTimeLimit } from "@/utils/scoring";
+import { exportQuiz } from "@/utils/quizStorage";
+import { sanitizeQuestionTimeLimit } from "@/utils/scoring";
+import {
+  DEFAULT_TEAM_BUILDING_SETTINGS,
+  createEmptyQuestionForQuizType,
+  createEmptyMcqQuestion,
+  createEmptyTeamQuestion,
+  resolveQuizType,
+  validateQuestionForQuizType,
+} from "@/utils/teamBuilding";
 
 interface EditQuizPageProps {
   quizId: string;
 }
 
-function createEmptyQuestion(): Question {
-  return {
-    id: generateUUID(),
-    type: "mcq",
-    text: "",
-    choices: [
-      { id: generateUUID(), text: "" },
-      { id: generateUUID(), text: "" },
-      { id: generateUUID(), text: "" },
-      { id: generateUUID(), text: "" },
-    ],
-    correctChoiceIds: [],
-    timeLimit: DEFAULT_QUESTION_TIME_LIMIT,
-  };
-}
+function migrateQuestionToQuizType(question: Question, quizType: QuizType): Question {
+  if (quizType === "standard") {
+    if (question.type === "mcq") return question;
+    const replacement = createEmptyMcqQuestion();
+    return {
+      ...replacement,
+      id: question.id,
+      text: question.text,
+      imageUrl: question.imageUrl,
+      timeLimit: sanitizeQuestionTimeLimit(question.timeLimit),
+    };
+  }
 
-function validateQuestion(q: Question, index: number): string | null {
-  if (!q.text.trim()) {
-    return `Question ${index + 1}: Please enter a question`;
-  }
-  
-  const filledChoices = q.choices.filter(c => c.text.trim());
-  if (filledChoices.length < 2) {
-    return `Question ${index + 1}: Please provide at least 2 answer options`;
-  }
-  
-  if (q.correctChoiceIds.length === 0) {
-    return `Question ${index + 1}: Please select the correct answer`;
-  }
-  
-  const correctChoice = q.choices.find(c => q.correctChoiceIds.includes(c.id));
-  if (!correctChoice || !correctChoice.text.trim()) {
-    return `Question ${index + 1}: The correct answer must have text`;
-  }
-  
-  return null;
+  if (question.type !== "mcq") return question;
+  const replacement = createEmptyTeamQuestion("this-or-that");
+  return {
+    ...replacement,
+    id: question.id,
+    text: question.text,
+    imageUrl: question.imageUrl,
+    timeLimit: sanitizeQuestionTimeLimit(question.timeLimit),
+  };
 }
 
 export function EditQuizPage({ quizId }: EditQuizPageProps) {
@@ -59,6 +54,9 @@ export function EditQuizPage({ quizId }: EditQuizPageProps) {
 
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
+  const [quizType, setQuizType] = useState<QuizType>("standard");
+  const [teamBuildingSettings, setTeamBuildingSettings] =
+    useState<TeamBuildingQuizSettings>(DEFAULT_TEAM_BUILDING_SETTINGS);
   const [questions, setQuestions] = useState<Question[]>([]);
   const [originalQuiz, setOriginalQuiz] = useState<Quiz | null>(null);
   const [saving, setSaving] = useState(false);
@@ -67,9 +65,15 @@ export function EditQuizPage({ quizId }: EditQuizPageProps) {
   useEffect(() => {
     const quiz = getQuizById(quizId);
     if (quiz) {
+      const resolvedQuizType = resolveQuizType(quiz.quizType);
       setOriginalQuiz(quiz);
       setTitle(quiz.title);
       setDescription(quiz.description || "");
+      setQuizType(resolvedQuizType);
+      setTeamBuildingSettings({
+        ...DEFAULT_TEAM_BUILDING_SETTINGS,
+        ...(quiz.teamBuildingSettings ?? {}),
+      });
       setQuestions(quiz.questions.map((question) => ({
         ...question,
         timeLimit: sanitizeQuestionTimeLimit(question.timeLimit),
@@ -80,7 +84,15 @@ export function EditQuizPage({ quizId }: EditQuizPageProps) {
   }, [quizId, getQuizById]);
 
   const handleAddQuestion = () => {
-    setQuestions([...questions, createEmptyQuestion()]);
+    setQuestions([...questions, createEmptyQuestionForQuizType(quizType)]);
+    setError(null);
+  };
+
+  const handleQuizTypeChange = (nextQuizType: QuizType) => {
+    setQuizType(nextQuizType);
+    setQuestions((currentQuestions) =>
+      currentQuestions.map((question) => migrateQuestionToQuizType(question, nextQuizType))
+    );
     setError(null);
   };
 
@@ -109,7 +121,7 @@ export function EditQuizPage({ quizId }: EditQuizPageProps) {
     }
 
     for (let i = 0; i < questions.length; i++) {
-      const validationError = validateQuestion(questions[i], i);
+      const validationError = validateQuestionForQuizType(questions[i], i, quizType);
       if (validationError) {
         setError(validationError);
         return;
@@ -120,17 +132,63 @@ export function EditQuizPage({ quizId }: EditQuizPageProps) {
 
     setSaving(true);
 
-    const cleanedQuestions = questions.map(q => ({
-      ...q,
-      choices: q.choices.filter(c => c.text.trim()),
-      timeLimit: sanitizeQuestionTimeLimit(q.timeLimit),
-    }));
+    const cleanedQuestions = questions.map((question) => {
+      if (question.type === "mcq") {
+        return {
+          ...question,
+          choices: question.choices.filter((choice) => choice.text.trim()),
+          timeLimit: sanitizeQuestionTimeLimit(question.timeLimit),
+        };
+      }
+
+      if (question.type === "this-or-that") {
+        const optionA: Choice = question.options[0] ?? { id: generateUUID(), text: "" };
+        const optionB: Choice = question.options[1] ?? { id: generateUUID(), text: "" };
+        return {
+          ...question,
+          options: [optionA, optionB] as [Choice, Choice],
+          timeLimit: sanitizeQuestionTimeLimit(question.timeLimit),
+        };
+      }
+
+      if (question.type === "select-or-text") {
+        return {
+          ...question,
+          options: question.options.filter((choice) => choice.text.trim()),
+          maxAnswersPerPlayer: Math.max(1, Math.floor(question.maxAnswersPerPlayer ?? 3)),
+          timeLimit: sanitizeQuestionTimeLimit(question.timeLimit),
+        };
+      }
+
+      if (question.type === "free-text") {
+        return {
+          ...question,
+          maxAnswersPerPlayer: Math.max(1, Math.floor(question.maxAnswersPerPlayer ?? 3)),
+          timeLimit: sanitizeQuestionTimeLimit(question.timeLimit),
+        };
+      }
+
+      return {
+        ...question,
+        maxAnswersPerPlayer: Math.max(1, Math.floor(question.maxAnswersPerPlayer ?? 3)),
+        maxVotesPerPlayer: Math.max(1, Math.floor(question.maxVotesPerPlayer ?? 3)),
+        timeLimit: sanitizeQuestionTimeLimit(question.timeLimit),
+      };
+    });
 
     const updatedQuiz: Quiz = {
       ...originalQuiz,
       title: title.trim(),
       description: description.trim() || undefined,
       version: originalQuiz.version + 1,
+      quizType,
+      teamBuildingSettings:
+        quizType === "team-building"
+          ? {
+              ...DEFAULT_TEAM_BUILDING_SETTINGS,
+              ...teamBuildingSettings,
+            }
+          : undefined,
       questions: cleanedQuestions,
     };
 
@@ -144,6 +202,14 @@ export function EditQuizPage({ quizId }: EditQuizPageProps) {
       ...originalQuiz,
       title: title.trim(),
       description: description.trim() || undefined,
+      quizType,
+      teamBuildingSettings:
+        quizType === "team-building"
+          ? {
+              ...DEFAULT_TEAM_BUILDING_SETTINGS,
+              ...teamBuildingSettings,
+            }
+          : undefined,
       questions,
     };
     exportQuiz(quizToExport);
@@ -211,6 +277,152 @@ export function EditQuizPage({ quizId }: EditQuizPageProps) {
             className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-[var(--text-primary)] placeholder:text-[var(--text-secondary)]/50 focus:outline-none focus:ring-2 focus:ring-[var(--color-action)]/50 focus:border-[var(--color-action)] transition-all resize-none"
           />
         </div>
+
+        <div>
+          <label className="block text-sm font-medium text-[var(--text-secondary)] mb-1.5">
+            Quiz Type
+          </label>
+          <select
+            value={quizType}
+            onChange={(e) => handleQuizTypeChange(e.target.value as QuizType)}
+            className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--color-action)]/50 focus:border-[var(--color-action)]"
+          >
+            <option value="standard" className="bg-slate-900 text-white">Standard</option>
+            <option value="team-building" className="bg-slate-900 text-white">Team Building</option>
+          </select>
+        </div>
+
+        {quizType === "team-building" && (
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 p-3 rounded-lg bg-white/[0.03] border border-white/10">
+            <p className="text-xs uppercase tracking-wide text-[var(--text-secondary)]/80 sm:col-span-2">
+              Team Building settings
+            </p>
+
+            <label
+              htmlFor="team-setting-discussion-voting"
+              className="text-sm text-[var(--text-secondary)] flex items-center justify-between gap-3 rounded-lg border border-white/10 bg-white/[0.02] px-3 py-2.5 cursor-pointer"
+            >
+              Enable discussion voting
+              <Checkbox
+                id="team-setting-discussion-voting"
+                checked={teamBuildingSettings.enableDiscussionVoting}
+                onCheckedChange={(checked) =>
+                  setTeamBuildingSettings((current) => ({
+                    ...current,
+                    enableDiscussionVoting: checked === true,
+                  }))
+                }
+                className="size-5 border-white/30 data-[state=checked]:bg-[var(--color-action)] data-[state=checked]:border-[var(--color-action)] data-[state=checked]:text-white"
+              />
+            </label>
+
+            <label className="text-sm text-[var(--text-secondary)] flex items-center justify-between gap-3 rounded-lg border border-white/10 bg-white/[0.02] px-3 py-2.5">
+              Max answers per player
+              <span className="inline-flex items-center gap-2 rounded-lg border border-white/10 bg-white/5 px-2 py-1">
+                <button
+                  type="button"
+                  onClick={() =>
+                    setTeamBuildingSettings((current) => ({
+                      ...current,
+                      maxAnswersPerPlayer: Math.max(1, current.maxAnswersPerPlayer - 1),
+                    }))
+                  }
+                  className="p-1 rounded-md text-[var(--text-secondary)] hover:text-[var(--color-action)] hover:bg-white/5"
+                  aria-label="Decrease max answers per player"
+                >
+                  <Minus className="w-3.5 h-3.5" />
+                </button>
+                <input
+                  type="number"
+                  min={1}
+                  value={teamBuildingSettings.maxAnswersPerPlayer}
+                  onChange={(e) =>
+                    setTeamBuildingSettings((current) => ({
+                      ...current,
+                      maxAnswersPerPlayer: Math.max(1, Number(e.target.value) || 1),
+                    }))
+                  }
+                  className="w-12 bg-transparent border-0 text-center text-sm text-[var(--text-primary)] [appearance:textfield] focus:outline-none [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+                />
+                <button
+                  type="button"
+                  onClick={() =>
+                    setTeamBuildingSettings((current) => ({
+                      ...current,
+                      maxAnswersPerPlayer: current.maxAnswersPerPlayer + 1,
+                    }))
+                  }
+                  className="p-1 rounded-md text-[var(--text-secondary)] hover:text-[var(--color-action)] hover:bg-white/5"
+                  aria-label="Increase max answers per player"
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                </button>
+              </span>
+            </label>
+
+            <label className="text-sm text-[var(--text-secondary)] flex items-center justify-between gap-3 rounded-lg border border-white/10 bg-white/[0.02] px-3 py-2.5">
+              Max votes per player
+              <span className="inline-flex items-center gap-2 rounded-lg border border-white/10 bg-white/5 px-2 py-1">
+                <button
+                  type="button"
+                  onClick={() =>
+                    setTeamBuildingSettings((current) => ({
+                      ...current,
+                      maxVotesPerPlayer: Math.max(1, current.maxVotesPerPlayer - 1),
+                    }))
+                  }
+                  className="p-1 rounded-md text-[var(--text-secondary)] hover:text-[var(--color-action)] hover:bg-white/5"
+                  aria-label="Decrease max votes per player"
+                >
+                  <Minus className="w-3.5 h-3.5" />
+                </button>
+                <input
+                  type="number"
+                  min={1}
+                  value={teamBuildingSettings.maxVotesPerPlayer}
+                  onChange={(e) =>
+                    setTeamBuildingSettings((current) => ({
+                      ...current,
+                      maxVotesPerPlayer: Math.max(1, Number(e.target.value) || 1),
+                    }))
+                  }
+                  className="w-12 bg-transparent border-0 text-center text-sm text-[var(--text-primary)] [appearance:textfield] focus:outline-none [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+                />
+                <button
+                  type="button"
+                  onClick={() =>
+                    setTeamBuildingSettings((current) => ({
+                      ...current,
+                      maxVotesPerPlayer: current.maxVotesPerPlayer + 1,
+                    }))
+                  }
+                  className="p-1 rounded-md text-[var(--text-secondary)] hover:text-[var(--color-action)] hover:bg-white/5"
+                  aria-label="Increase max votes per player"
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                </button>
+              </span>
+            </label>
+
+            <label
+              htmlFor="team-setting-own-vote"
+              className="text-sm text-[var(--text-secondary)] flex items-center justify-between gap-3 rounded-lg border border-white/10 bg-white/[0.02] px-3 py-2.5 cursor-pointer"
+            >
+              Allow own-answer voting
+              <Checkbox
+                id="team-setting-own-vote"
+                checked={teamBuildingSettings.allowOwnAnswerVoting}
+                onCheckedChange={(checked) =>
+                  setTeamBuildingSettings((current) => ({
+                    ...current,
+                    allowOwnAnswerVoting: checked === true,
+                  }))
+                }
+                className="size-5 border-white/30 data-[state=checked]:bg-[var(--color-action)] data-[state=checked]:border-[var(--color-action)] data-[state=checked]:text-white"
+              />
+            </label>
+          </div>
+        )}
       </div>
 
       {/* Questions */}
@@ -219,6 +431,7 @@ export function EditQuizPage({ quizId }: EditQuizPageProps) {
           <QuestionEditor
             key={question.id}
             question={question}
+            quizType={quizType}
             index={index}
             onChange={(q) => handleUpdateQuestion(index, q)}
             onDelete={() => handleDeleteQuestion(index)}

@@ -8,3 +8,6 @@ export { QrCode } from './QrCode';
 export { QuizCard } from './QuizCard';
 export { QuestionEditor } from './QuestionEditor';
 export { GiphyPicker } from './GiphyPicker';
+export { ClusterView } from './ClusterView';
+export { DiscussionQueue } from './DiscussionQueue';
+export { InterestMatchGraph } from './InterestMatchGraph';

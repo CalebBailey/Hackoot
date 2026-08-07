@@ -2,6 +2,22 @@ import { create } from "zustand";
 import { Quiz } from "../types";
 import { saveQuiz, loadAllQuizzes, deleteQuiz as deleteQuizFromStorage } from "../utils/quizStorage";
 import { generateUUID } from "../lib/utils";
+import { DEFAULT_TEAM_BUILDING_SETTINGS, resolveQuizType } from "@/utils/teamBuilding";
+
+function withQuizDefaults(quiz: Quiz): Quiz {
+  const quizType = resolveQuizType(quiz.quizType);
+  return {
+    ...quiz,
+    quizType,
+    teamBuildingSettings:
+      quizType === "team-building"
+        ? {
+            ...DEFAULT_TEAM_BUILDING_SETTINGS,
+            ...(quiz.teamBuildingSettings ?? {}),
+          }
+        : undefined,
+  };
+}
 
 interface QuizStore {
   quizzes: Quiz[];
@@ -22,14 +38,16 @@ export const useQuizStore = create<QuizStore>((set, get) => ({
   },
 
   createQuiz: (quiz: Quiz) => {
-    saveQuiz(quiz);
-    set((state) => ({ quizzes: [...state.quizzes, quiz] }));
+    const normalisedQuiz = withQuizDefaults(quiz);
+    saveQuiz(normalisedQuiz);
+    set((state) => ({ quizzes: [...state.quizzes, normalisedQuiz] }));
   },
 
   updateQuiz: (quiz: Quiz) => {
-    saveQuiz(quiz);
+    const normalisedQuiz = withQuizDefaults(quiz);
+    saveQuiz(normalisedQuiz);
     set((state) => ({
-      quizzes: state.quizzes.map((q) => (q.quizId === quiz.quizId ? quiz : q)),
+      quizzes: state.quizzes.map((q) => (q.quizId === normalisedQuiz.quizId ? normalisedQuiz : q)),
     }));
   },
 
@@ -42,12 +60,12 @@ export const useQuizStore = create<QuizStore>((set, get) => ({
 
   importQuiz: (quiz: Quiz) => {
     // Generate new ID to avoid conflicts
-    const importedQuiz = {
+    const importedQuiz = withQuizDefaults({
       ...quiz,
       quizId: generateUUID(),
       createdAt: new Date().toISOString(),
       version: 1,
-    };
+    });
     saveQuiz(importedQuiz);
     set((state) => ({ quizzes: [...state.quizzes, importedQuiz] }));
   },

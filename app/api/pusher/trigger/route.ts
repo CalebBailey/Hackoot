@@ -5,8 +5,20 @@ const CHANNEL_PATTERN = /^private-hackoot-(host|play)-[A-Z0-9]{6}$/;
 
 // Restrict which events each channel type may carry to prevent spoofing
 const ALLOWED_EVENTS: Record<string, string[]> = {
-  host: ["player-join", "player-answer"],
-  play: ["lobbyUpdate", "questionStarted", "answerRevealed", "sessionEnded", "error", "rejoinAck"],
+  host: ["player-join", "player-answer", "player-choice-answer", "player-text-answers", "player-discussion-votes"],
+  play: [
+    "lobbyUpdate",
+    "questionStarted",
+    "answerRevealed",
+    "teamSubmissionClosed",
+    "teamVotingOpened",
+    "teamVotingClosed",
+    "teamResultsPublished",
+    "teamDiscussionItemOpened",
+    "sessionEnded",
+    "error",
+    "rejoinAck",
+  ],
 };
 
 export async function POST(req: NextRequest) {
