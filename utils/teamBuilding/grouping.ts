@@ -331,7 +331,7 @@ export function groupAnswersByNormalisedText(
     }
 
     const newBucket: ClusterBucket = {
-      canonicalText: key,
+      canonicalText: answer.text.trim(),
       groupedAnswers: [answer],
       participantIds: new Set([answer.participantId]),
       aliasKeys: new Set([key]),
