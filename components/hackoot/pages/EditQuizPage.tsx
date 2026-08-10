@@ -141,6 +141,31 @@ export function EditQuizPage({ quizId }: EditQuizPageProps) {
     setDragOverQuestionId(questionId);
   };
 
+  const resetDragState = () => {
+    setDraggedQuestionId(null);
+    setDragOverQuestionId(null);
+  };
+
+  const resolveDropTargetQuestionId = (clientY: number): string | null => {
+    const dropTargets = Array.from(
+      document.querySelectorAll<HTMLElement>("[data-question-drop-id]")
+    );
+
+    if (dropTargets.length === 0) {
+      return questions.length > 0 ? questions[questions.length - 1].id : null;
+    }
+
+    for (const target of dropTargets) {
+      const rect = target.getBoundingClientRect();
+      const midpoint = rect.top + rect.height / 2;
+      if (clientY <= midpoint) {
+        return target.dataset.questionDropId ?? null;
+      }
+    }
+
+    return dropTargets[dropTargets.length - 1].dataset.questionDropId ?? null;
+  };
+
   const handleQuestionDragOver = (
     event: DragEvent<HTMLDivElement>,
     questionId: string
@@ -157,27 +182,65 @@ export function EditQuizPage({ quizId }: EditQuizPageProps) {
     }
   };
 
+  const handleScreenDragOver = (event: DragEvent<HTMLDivElement>) => {
+    if (!draggedQuestionId) {
+      return;
+    }
+
+    event.preventDefault();
+    event.dataTransfer.dropEffect = "move";
+
+    const targetQuestionId = resolveDropTargetQuestionId(event.clientY);
+    if (!targetQuestionId || targetQuestionId === draggedQuestionId) {
+      return;
+    }
+
+    if (dragOverQuestionId !== targetQuestionId) {
+      setDragOverQuestionId(targetQuestionId);
+    }
+  };
+
   const handleQuestionDrop = (
     event: DragEvent<HTMLDivElement>,
     targetQuestionId: string
   ) => {
+    event.stopPropagation();
     event.preventDefault();
 
     const sourceQuestionId = event.dataTransfer.getData("text/plain") || draggedQuestionId;
     if (!sourceQuestionId || sourceQuestionId === targetQuestionId) {
-      setDraggedQuestionId(null);
-      setDragOverQuestionId(null);
+      resetDragState();
       return;
     }
 
     reorderQuestions(sourceQuestionId, targetQuestionId);
-    setDraggedQuestionId(null);
-    setDragOverQuestionId(null);
+    resetDragState();
+  };
+
+  const handleScreenDrop = (event: DragEvent<HTMLDivElement>) => {
+    if (!draggedQuestionId) {
+      return;
+    }
+
+    event.preventDefault();
+    const sourceQuestionId = event.dataTransfer.getData("text/plain") || draggedQuestionId;
+    if (!sourceQuestionId) {
+      resetDragState();
+      return;
+    }
+
+    const targetQuestionId = resolveDropTargetQuestionId(event.clientY);
+    if (!targetQuestionId || sourceQuestionId === targetQuestionId) {
+      resetDragState();
+      return;
+    }
+
+    reorderQuestions(sourceQuestionId, targetQuestionId);
+    resetDragState();
   };
 
   const handleQuestionDragEnd = () => {
-    setDraggedQuestionId(null);
-    setDragOverQuestionId(null);
+    resetDragState();
   };
 
   const handleSave = () => {
@@ -292,7 +355,12 @@ export function EditQuizPage({ quizId }: EditQuizPageProps) {
   }
 
   return (
-    <div className="container mx-auto px-4 py-8 max-w-3xl">
+    <div
+      className="min-h-screen"
+      onDragOver={handleScreenDragOver}
+      onDrop={handleScreenDrop}
+    >
+      <div className="container mx-auto px-4 py-8 max-w-3xl">
       {/* Header */}
       <div className="flex items-center gap-4 mb-8">
         <button
@@ -498,6 +566,7 @@ export function EditQuizPage({ quizId }: EditQuizPageProps) {
         {questions.map((question, index) => (
           <div
             key={question.id}
+            data-question-drop-id={question.id}
             onDragOver={(event) => handleQuestionDragOver(event, question.id)}
             onDrop={(event) => handleQuestionDrop(event, question.id)}
             className={`rounded-xl transition-all ${
@@ -541,6 +610,7 @@ export function EditQuizPage({ quizId }: EditQuizPageProps) {
         <Save className="w-5 h-5 mr-2" />
         Save Changes
       </Button>
+      </div>
     </div>
   );
 }
