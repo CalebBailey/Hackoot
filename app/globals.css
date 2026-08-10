@@ -89,14 +89,9 @@ html, body {
   background-size: cover;
 }
 
-html {
-  background-attachment: fixed;
-}
-
 body {
   min-height: 100dvh;
   min-height: -webkit-fill-available;
-  background-attachment: fixed;
   overscroll-behavior-x: none;
   overscroll-behavior-y: none;
 }
