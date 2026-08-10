@@ -10,7 +10,7 @@ import { navigate } from "../HackootApp";
 import { Users, Eye, Zap } from "lucide-react";
 import { HostPeer } from "@/transport/peer";
 import { calculateKahootPoints, getResponseTime, sanitizeQuestionTimeLimit } from "@/utils/scoring";
-import { getSelectableChoices, resolveQuizType } from "@/utils/teamBuilding";
+import { getSelectableChoices, normaliseAnswer, resolveQuizType } from "@/utils/teamBuilding";
 
 interface HostQuestionPageProps {
   quizId: string;
@@ -96,7 +96,20 @@ export function HostQuestionPage({ quizId }: HostQuestionPageProps) {
         return;
       }
       if (questionId !== question.id) return;
-      const cleanedAnswers = answers.map((answer) => answer.trim()).filter(Boolean);
+      let cleanedAnswers = answers.map((answer) => answer.trim()).filter(Boolean);
+
+      if (question.type === "select-or-text" && !(question.allowCustomAnswer ?? true)) {
+        const allowedOptionKeys = new Set(
+          question.options
+            .map((option) => normaliseAnswer(option.text))
+            .filter((key): key is string => key.length > 0)
+        );
+        cleanedAnswers = cleanedAnswers.filter((answer) => {
+          const normalised = normaliseAnswer(answer);
+          return normalised.length > 0 && allowedOptionKeys.has(normalised);
+        });
+      }
+
       recordTeamTextAnswers(participantId, questionId, cleanedAnswers, submittedAt);
     };
   }, [
