@@ -11,6 +11,7 @@ import { PeerMessage } from "@/types";
 import { DEFAULT_QUESTION_TIME_LIMIT } from "@/utils/scoring";
 import { Plus, Send, Zap } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { getSelectableChoices, normaliseAnswer, resolveQuizType } from "@/utils/teamBuilding";
 
 const STANDARD_OPTION_BASE_COLOURS = [
@@ -173,6 +174,34 @@ export function PlayerQuestionPage() {
     const trimmed = textInput.trim();
     if (!trimmed) return;
 
+    const duplicateKey = normaliseAnswer(trimmed) || trimmed.toLowerCase();
+    const stagedKeys = new Set(
+      textAnswers
+        .map((answer) => {
+          const answerKey = normaliseAnswer(answer) || answer.toLowerCase();
+          return answerKey;
+        })
+        .filter((answerKey) => answerKey.length > 0)
+    );
+
+    if (currentQuestion?.type === "select-or-text") {
+      const selectedOptionTexts = getSelectableChoices(currentQuestion)
+        .filter((choice) => selectedOptionIds.includes(choice.id))
+        .map((choice) => choice.text.trim())
+        .filter(Boolean);
+
+      for (const optionText of selectedOptionTexts) {
+        const optionKey = normaliseAnswer(optionText) || optionText.toLowerCase();
+        if (optionKey) {
+          stagedKeys.add(optionKey);
+        }
+      }
+    }
+
+    if (duplicateKey.length > 0 && stagedKeys.has(duplicateKey)) {
+      return;
+    }
+
     const maxAnswers =
       currentQuestion?.type === "free-text" ||
       currentQuestion?.type === "discussion" ||
@@ -325,6 +354,38 @@ export function PlayerQuestionPage() {
       : [];
   const canUseCustomAnswer =
     currentQuestion.type !== "select-or-text" || (currentQuestion.allowCustomAnswer ?? true);
+
+  const selectedOptionTextsForDuplicateCheck =
+    currentQuestion.type === "select-or-text"
+      ? selectableChoices
+          .filter((choice) => selectedOptionIds.includes(choice.id))
+          .map((choice) => choice.text.trim())
+          .filter(Boolean)
+      : [];
+
+  const stagedAnswerKeys = new Set(
+    [
+      ...textAnswers,
+      ...selectedOptionTextsForDuplicateCheck,
+    ]
+      .map((answer) => {
+        const key = normaliseAnswer(answer) || answer.toLowerCase();
+        return key;
+      })
+      .filter((key) => key.length > 0)
+  );
+
+  const draftInputKey = (() => {
+    const trimmed = textInput.trim();
+    if (!trimmed) {
+      return "";
+    }
+
+    return normaliseAnswer(trimmed) || trimmed.toLowerCase();
+  })();
+
+  const duplicateDraftAnswer = draftInputKey.length > 0 && stagedAnswerKeys.has(draftInputKey);
+  const duplicateDraftMessage = "Duplicate entry - you have already staged this response.";
   const canSubmitStagedAfterTimeout =
     isTeamBuilding &&
     isTextSubmissionQuestion &&
@@ -495,19 +556,29 @@ export function PlayerQuestionPage() {
                     )}
                   </div>
 
-                  <Button
-                    type="button"
-                    variant="primary"
-                    size="md"
-                    fullWidth
-                    onClick={addTextAnswer}
-                    disabled={locked || remainingAnswers === 0 || !textInput.trim()}
-                    className="mt-3 bg-[#6D8CF7] hover:bg-[#5C7DEB]"
-                    aria-label="Add response to staging"
-                  >
-                    <Plus className="w-5 h-5 mr-2" />
-                    Add response
-                  </Button>
+                  <Tooltip open={!locked && duplicateDraftAnswer}>
+                    <TooltipTrigger asChild>
+                      <div className="mt-3">
+                        <Button
+                          type="button"
+                          variant="primary"
+                          size="md"
+                          fullWidth
+                          onClick={addTextAnswer}
+                          disabled={locked || remainingAnswers === 0 || !textInput.trim() || duplicateDraftAnswer}
+                          className="bg-[#6D8CF7] hover:bg-[#5C7DEB]"
+                          aria-label="Add response to staging"
+                        >
+                          <Plus className="w-5 h-5 mr-2" />
+                          Add response
+                        </Button>
+                      </div>
+                    </TooltipTrigger>
+                    <TooltipContent side="right" sideOffset={10}>
+                      {duplicateDraftMessage}
+                    </TooltipContent>
+                  </Tooltip>
+
                 </>
               )}
 
