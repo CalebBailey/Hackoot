@@ -574,7 +574,13 @@ export function PlayerQuestionPage() {
                         </Button>
                       </div>
                     </TooltipTrigger>
-                    <TooltipContent side="right" sideOffset={10}>
+                    <TooltipContent
+                      side="bottom"
+                      align="center"
+                      sideOffset={8}
+                      collisionPadding={12}
+                      className="max-w-[min(22rem,calc(100vw-2rem))] text-center"
+                    >
                       {duplicateDraftMessage}
                     </TooltipContent>
                   </Tooltip>
