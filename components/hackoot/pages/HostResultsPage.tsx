@@ -323,6 +323,21 @@ export function HostResultsPage({ quizId }: HostResultsPageProps) {
     return null;
   }
 
+  const discussionVoterIds =
+    currentQuestion.type === "discussion"
+      ? new Set(
+          session.answers
+            .filter(
+              (answer) =>
+                answer.questionId === currentQuestion.id &&
+                (answer.voteAnswerIds?.length ?? 0) > 0
+            )
+            .map((answer) => answer.participantId)
+        )
+      : new Set<string>();
+  const votedCount = discussionVoterIds.size;
+  const totalVoterCount = session.participants.length;
+
   const leaderboard = getLeaderboard();
 
   return (
@@ -347,9 +362,14 @@ export function HostResultsPage({ quizId }: HostResultsPageProps) {
 
           {votingOpen && currentQuestion.type === "discussion" && (
             <div className="glass-card p-5">
-              <div className="flex items-center gap-2 mb-3">
-                <Vote className="w-5 h-5 text-[var(--color-action)]" />
-                <h3 className="text-lg font-semibold text-[var(--text-primary)]">Discussion voting in progress</h3>
+              <div className="flex items-center justify-between gap-3 mb-3">
+                <div className="flex items-center gap-2 min-w-0">
+                  <Vote className="w-5 h-5 text-[var(--color-action)]" />
+                  <h3 className="text-lg font-semibold text-[var(--text-primary)]">Discussion voting in progress</h3>
+                </div>
+                <span className="text-xs px-2 py-1 rounded-full bg-[var(--color-action)]/15 border border-[var(--color-action)]/30 text-[var(--text-primary)] whitespace-nowrap">
+                  {votedCount}/{totalVoterCount} voted
+                </span>
               </div>
               {discussionCandidates.length === 0 ? (
                 <p className="text-sm text-[var(--text-secondary)]">No submissions received for this discussion question.</p>
