@@ -90,7 +90,7 @@ export function JoinPage({ initialRoomCode }: JoinPageProps) {
   };
 
   return (
-    <div className="container mx-auto px-4 py-8 max-w-md min-h-screen flex flex-col justify-center">
+    <div className="container mx-auto px-4 py-8 max-w-md min-h-dvh flex flex-col justify-center">
       <div className="glass-card p-6 sm:p-8">
         {/* Header */}
         <div className="flex items-center gap-3 mb-6">

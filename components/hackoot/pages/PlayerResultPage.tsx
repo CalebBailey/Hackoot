@@ -134,7 +134,7 @@ export function PlayerResultPage() {
 
   return (
     <div
-      className={`container mx-auto px-4 py-8 min-h-screen overflow-y-auto flex flex-col ${
+      className={`container mx-auto px-4 py-8 min-h-dvh overflow-y-auto flex flex-col ${
         isTeamBuilding ? "max-w-2xl justify-start" : "max-w-md justify-center"
       }`}
     >

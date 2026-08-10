@@ -116,7 +116,7 @@ export function HackootApp() {
   return (
     <>
       <div className="app-bg" />
-      <main className="min-h-screen relative z-0 overflow-x-hidden">
+      <main className="relative z-0 min-h-dvh overflow-x-hidden">
         <div key={JSON.stringify(route)} className="page-transition">
           {renderPage()}
         </div>

@@ -317,7 +317,7 @@ export function PlayerQuestionPage() {
     currentQuestion.type !== "select-or-text" || (currentQuestion.allowCustomAnswer ?? true);
 
   return (
-    <div className="h-screen overflow-y-auto flex flex-col px-4 py-4 max-w-2xl mx-auto">
+    <div className="h-dvh overflow-y-auto flex flex-col px-4 py-4 max-w-2xl mx-auto">
       {isDoublePoints && <div className="double-points-vignette" aria-hidden="true" />}
 
       {/* Points info / double points badge */}
@@ -374,6 +374,7 @@ export function PlayerQuestionPage() {
             selectedId={selectedId || undefined}
             locked={locked}
             showChoiceText={!isTeamBuilding}
+            compact
           />
         ) : (
           <div className="w-full max-w-xl space-y-4">

@@ -356,7 +356,7 @@ export function EditQuizPage({ quizId }: EditQuizPageProps) {
 
   return (
     <div
-      className="min-h-screen"
+      className="min-h-dvh"
       onDragOver={handleScreenDragOver}
       onDrop={handleScreenDrop}
     >

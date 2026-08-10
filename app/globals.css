@@ -83,6 +83,16 @@ html, body {
   color: var(--text-primary);
 }
 
+html {
+  background: #0D0118;
+}
+
+body {
+  min-height: 100dvh;
+  background: var(--gradient-bg);
+  overscroll-behavior-x: none;
+}
+
 .app-bg {
   position: fixed;
   inset: 0;
