@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { DragEvent, useEffect, useState } from "react";
 import { Choice, Question, QuizType } from "@/types";
 import {
   GripVertical,
@@ -38,6 +38,8 @@ interface QuestionEditorProps {
   index: number;
   onChange: (question: Question) => void;
   onDelete: () => void;
+  onDragStart?: (event: DragEvent<HTMLDivElement>) => void;
+  onDragEnd?: () => void;
 }
 
 export function QuestionEditor({
@@ -46,6 +48,8 @@ export function QuestionEditor({
   index,
   onChange,
   onDelete,
+  onDragStart,
+  onDragEnd,
 }: QuestionEditorProps) {
   const timeLimit = sanitizeQuestionTimeLimit(question.timeLimit);
   const [imageInput, setImageInput] = useState(question.imageUrl ?? "");
@@ -215,7 +219,16 @@ export function QuestionEditor({
   return (
     <div className="glass-card p-5 space-y-4">
       <div className="flex items-start gap-3">
-        <div className="cursor-move text-[var(--text-secondary)] mt-2 opacity-50">
+        <div
+          draggable={Boolean(onDragStart)}
+          onDragStart={onDragStart}
+          onDragEnd={onDragEnd}
+          className={`text-[var(--text-secondary)] mt-2 opacity-50 ${
+            onDragStart ? "cursor-grab active:cursor-grabbing" : "cursor-move"
+          }`}
+          aria-label="Drag question to reorder"
+          title="Drag to reorder"
+        >
           <GripVertical className="w-5 h-5" />
         </div>
 
