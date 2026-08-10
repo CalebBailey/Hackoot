@@ -140,6 +140,7 @@ export function HostResultsPage({ quizId }: HostResultsPageProps) {
   const isLastQuestion = quiz ? currentQuestionIndex >= quiz.questions.length - 1 : true;
   const quizType = resolveQuizType(quiz?.quizType);
   const isTeamBuilding = quizType === "team-building";
+  const isDiscussionVotingEnabled = quiz?.teamBuildingSettings?.enableDiscussionVoting ?? true;
   const selectableChoices = currentQuestion ? getSelectableChoices(currentQuestion) : [];
   const participantDirectory = session?.participants.map((participant) => ({
     participantId: participant.participantId,
@@ -153,6 +154,29 @@ export function HostResultsPage({ quizId }: HostResultsPageProps) {
 
     if (isTeamBuilding) {
       if (currentQuestion.type === "discussion") {
+        if (!isDiscussionVotingEnabled) {
+          const resultSnapshot = buildTeamResults(currentQuestion, session.answers);
+          setTeamResults(resultSnapshot);
+          setTeamVoteContext(null);
+          setTeamResultsSnapshot({
+            questionId: currentQuestion.id,
+            groupedAnswers: resultSnapshot.groupedAnswers,
+            discussionQueue: [],
+            participants: participantDirectory,
+          }, "team-results");
+          hostPeer.broadcast({
+            type: "teamResultsPublished",
+            questionId: currentQuestion.id,
+            groupedAnswers: resultSnapshot.groupedAnswers,
+            participants: participantDirectory,
+            sessionState: "team-results",
+          });
+          setSessionState("team-results");
+          setVotingOpen(false);
+          setRevealed(true);
+          return;
+        }
+
         if (votingOpen) {
           return;
         }
@@ -235,6 +259,7 @@ export function HostResultsPage({ quizId }: HostResultsPageProps) {
     revealed,
     revealAnswer,
     isTeamBuilding,
+    isDiscussionVotingEnabled,
     setSessionState,
     setTeamResultsSnapshot,
     setTeamVoteContext,
@@ -243,12 +268,18 @@ export function HostResultsPage({ quizId }: HostResultsPageProps) {
 
   useEffect(() => {
     if (!hostPeer || !currentQuestion || !isTeamBuilding || !votingOpen) {
+      if (hostPeer) {
+        hostPeer.onDiscussionVotesReceived = null;
+      }
       return;
     }
 
     hostPeer.onDiscussionVotesReceived = (participantId, questionId, answerIds, submittedAt) => {
       if (questionId !== currentQuestion.id) return;
       recordTeamVotes(participantId, questionId, answerIds, submittedAt);
+    };
+    return () => {
+      hostPeer.onDiscussionVotesReceived = null;
     };
   }, [hostPeer, currentQuestion, isTeamBuilding, votingOpen, recordTeamVotes]);
 

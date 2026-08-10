@@ -41,6 +41,7 @@ export function HostQuestionPage({ quizId }: HostQuestionPageProps) {
   const questionDuration = sanitizeQuestionTimeLimit(currentQuestion?.timeLimit);
   const quizType = resolveQuizType(quiz?.quizType);
   const isTeamBuilding = quizType === "team-building";
+  const isDiscussionVotingEnabled = quiz?.teamBuildingSettings?.enableDiscussionVoting ?? true;
 
   useEffect(() => {
     if (!quiz || !session || !hostPeer || initialized) {
@@ -165,7 +166,9 @@ export function HostQuestionPage({ quizId }: HostQuestionPageProps) {
         questionId: currentQuestion.id,
         submissionCount,
       });
-      setSessionState(currentQuestion.type === "discussion" ? "team-voting" : "team-results");
+      const shouldOpenDiscussionVoting =
+        currentQuestion.type === "discussion" && isDiscussionVotingEnabled;
+      setSessionState(shouldOpenDiscussionVoting ? "team-voting" : "team-results");
     }
     navigate(`/host/${quizId}/results`);
   };
@@ -268,7 +271,7 @@ export function HostQuestionPage({ quizId }: HostQuestionPageProps) {
         <Eye className="w-5 h-5 mr-2" />
         {canReveal
           ? isTeamBuilding
-            ? currentQuestion.type === "discussion"
+            ? currentQuestion.type === "discussion" && isDiscussionVotingEnabled
               ? "Open Voting"
               : "Show Team Results"
             : "Reveal Answers"
