@@ -46,7 +46,9 @@ export function ClusterView({
     [participants]
   );
 
-  const displayClusters = clusters.slice(0, maxItems);
+  const [showAllAnswers, setShowAllAnswers] = useState(false);
+  const hasMoreAnswers = clusters.length > maxItems;
+  const displayClusters = showAllAnswers ? clusters : clusters.slice(0, maxItems);
   const overlayOwnerId = useId();
   const [activeParticipantList, setActiveParticipantList] = useState<ActiveParticipantList | null>(null);
 
@@ -82,54 +84,68 @@ export function ClusterView({
       {displayClusters.length === 0 ? (
         <p className="text-sm text-[var(--text-secondary)]">No responses to group yet.</p>
       ) : (
-        <div className="space-y-2">
-          {displayClusters.map((cluster) => {
-            const clusterParticipants = cluster.participantIds
-              .map((participantId) => participantById.get(participantId))
-              .filter((participant): participant is ClusterParticipant => participant !== undefined);
-            const canOpenParticipantList =
-              showParticipantAvatars &&
-              enableParticipantList &&
-              clusterParticipants.length > 0;
+        <>
+          <div className="space-y-2">
+            {displayClusters.map((cluster) => {
+              const clusterParticipants = cluster.participantIds
+                .map((participantId) => participantById.get(participantId))
+                .filter((participant): participant is ClusterParticipant => participant !== undefined);
+              const canOpenParticipantList =
+                showParticipantAvatars &&
+                enableParticipantList &&
+                clusterParticipants.length > 0;
 
-            return (
-              <div
-                key={cluster.id}
-                className={cn(
-                  "flex items-center justify-between gap-3 text-sm bg-white/[0.03] border border-white/10 rounded-lg px-3 py-2",
-                  canOpenParticipantList && "cursor-pointer hover:bg-white/[0.06] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-action)]/50"
-                )}
-                role={canOpenParticipantList ? "button" : undefined}
-                tabIndex={canOpenParticipantList ? 0 : undefined}
-                onClick={canOpenParticipantList ? () => openParticipantList(cluster) : undefined}
-                onKeyDown={canOpenParticipantList
-                  ? (event) => {
-                      if (event.key === "Enter" || event.key === " ") {
-                        event.preventDefault();
-                        openParticipantList(cluster);
+              return (
+                <div
+                  key={cluster.id}
+                  className={cn(
+                    "flex items-center justify-between gap-3 text-sm bg-white/[0.03] border border-white/10 rounded-lg px-3 py-2",
+                    canOpenParticipantList && "cursor-pointer hover:bg-white/[0.06] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-action)]/50"
+                  )}
+                  role={canOpenParticipantList ? "button" : undefined}
+                  tabIndex={canOpenParticipantList ? 0 : undefined}
+                  onClick={canOpenParticipantList ? () => openParticipantList(cluster) : undefined}
+                  onKeyDown={canOpenParticipantList
+                    ? (event) => {
+                        if (event.key === "Enter" || event.key === " ") {
+                          event.preventDefault();
+                          openParticipantList(cluster);
+                        }
                       }
-                    }
-                  : undefined}
-                aria-label={canOpenParticipantList ? `View participants for ${cluster.canonicalText}` : undefined}
-              >
-                <span className="text-[var(--text-primary)] break-words">{cluster.canonicalText}</span>
+                    : undefined}
+                  aria-label={canOpenParticipantList ? `View participants for ${cluster.canonicalText}` : undefined}
+                >
+                  <span className="text-[var(--text-primary)] break-words">{cluster.canonicalText}</span>
 
-                {showParticipantAvatars ? (
-                  <div className="flex items-center gap-2 shrink-0">
-                    <ParticipantAvatarStack
-                      participantIds={cluster.participantIds}
-                      participants={participants}
-                      maxVisible={maxInlineAvatars}
-                    />
+                  {showParticipantAvatars ? (
+                    <div className="flex items-center gap-2 shrink-0">
+                      <ParticipantAvatarStack
+                        participantIds={cluster.participantIds}
+                        participants={participants}
+                        maxVisible={maxInlineAvatars}
+                      />
+                      <span className="text-[var(--text-secondary)]">{cluster.count}</span>
+                    </div>
+                  ) : (
                     <span className="text-[var(--text-secondary)]">{cluster.count}</span>
-                  </div>
-                ) : (
-                  <span className="text-[var(--text-secondary)]">{cluster.count}</span>
-                )}
-              </div>
-            );
-          })}
-        </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+
+          {hasMoreAnswers && (
+            <button
+              type="button"
+              onClick={() => setShowAllAnswers((current) => !current)}
+              className="mt-3 inline-flex items-center gap-2 text-sm text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
+            >
+              {showAllAnswers
+                ? "See fewer answers"
+                : `See more answers (${clusters.length - maxItems} more)`}
+            </button>
+          )}
+        </>
       )}
 
       {activeParticipantList && (
