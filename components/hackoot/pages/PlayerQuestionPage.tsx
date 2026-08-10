@@ -252,7 +252,17 @@ export function PlayerQuestionPage() {
   };
 
   const handleSubmitTextAnswers = () => {
-    if (locked || !playerPeer || !currentQuestion || !participantId) return;
+    if (!playerPeer || !currentQuestion || !participantId) return;
+
+    const allowTimedOutSubmit =
+      isTeamBuilding &&
+      (currentQuestion.type === "free-text" ||
+        currentQuestion.type === "discussion" ||
+        currentQuestion.type === "select-or-text") &&
+      locked &&
+      !hasAnsweredCurrentQuestion;
+
+    if (locked && !allowTimedOutSubmit) return;
 
     const selectableChoices = getSelectableChoices(currentQuestion);
     const selectedOptionTexts = selectableChoices
@@ -315,6 +325,13 @@ export function PlayerQuestionPage() {
       : [];
   const canUseCustomAnswer =
     currentQuestion.type !== "select-or-text" || (currentQuestion.allowCustomAnswer ?? true);
+  const canSubmitStagedAfterTimeout =
+    isTeamBuilding &&
+    isTextSubmissionQuestion &&
+    !hasAnsweredCurrentQuestion &&
+    locked &&
+    totalDraftAnswers > 0;
+  const canRemoveStagedAnswers = !hasAnsweredCurrentQuestion && !locked;
 
   return (
     <div className="h-dvh overflow-y-auto flex flex-col px-4 py-4 max-w-2xl mx-auto">
@@ -497,7 +514,9 @@ export function PlayerQuestionPage() {
               {canUseCustomAnswer && (
                 <div className="mt-3 rounded-lg border border-white/10 bg-black/20 p-3">
                   <div className="flex items-center justify-between gap-3 mb-2">
-                    <p className="text-sm font-medium text-[var(--text-primary)]">Staged responses (not sent yet)</p>
+                    <p className="text-sm font-medium text-[var(--text-primary)]">
+                      {hasAnsweredCurrentQuestion ? "Sent responses" : "Staged responses (not sent yet)"}
+                    </p>
                     <span className="text-xs px-2 py-1 rounded-full border border-white/20 text-[var(--text-secondary)]">
                       {totalDraftAnswers}/{maxAnswers}
                     </span>
@@ -509,29 +528,55 @@ export function PlayerQuestionPage() {
                     </p>
                   ) : (
                     <div className="flex flex-wrap gap-2">
-                      {stagedSelectOrTextOptions.map((option) => (
-                        <button
-                          key={`staged-option-${option.id}`}
-                          type="button"
-                          onClick={() => toggleSelectOrTextOption(option.id)}
-                          disabled={locked}
-                          className="px-2.5 py-1 rounded-full text-sm bg-white/10 border border-white/20 text-[var(--text-primary)] hover:bg-white/15"
-                        >
-                          Option {option.label}
-                        </button>
-                      ))}
+                      {stagedSelectOrTextOptions.map((option) => {
+                        if (canRemoveStagedAnswers) {
+                          return (
+                            <button
+                              key={`staged-option-${option.id}`}
+                              type="button"
+                              onClick={() => toggleSelectOrTextOption(option.id)}
+                              className="px-2.5 py-1 rounded-full text-sm bg-white/10 border border-white/20 text-[var(--text-primary)] hover:bg-white/15"
+                              aria-label={`Remove staged option ${option.label}`}
+                            >
+                              x Option {option.label}
+                            </button>
+                          );
+                        }
 
-                      {textAnswers.map((answer, index) => (
-                        <button
-                          key={`${answer}-${index}`}
-                          type="button"
-                          onClick={() => removeTextAnswer(index)}
-                          disabled={locked}
-                          className="px-2.5 py-1 rounded-full text-sm bg-[var(--color-action)]/15 border border-[var(--color-action)]/30 text-[var(--text-primary)] hover:bg-[var(--color-action)]/25"
-                        >
-                          {answer}
-                        </button>
-                      ))}
+                        return (
+                          <span
+                            key={`sent-option-${option.id}`}
+                            className="px-2.5 py-1 rounded-full text-sm bg-white/10 border border-white/20 text-[var(--text-primary)]"
+                          >
+                            Option {option.label}
+                          </span>
+                        );
+                      })}
+
+                      {textAnswers.map((answer, index) => {
+                        if (canRemoveStagedAnswers) {
+                          return (
+                            <button
+                              key={`${answer}-${index}`}
+                              type="button"
+                              onClick={() => removeTextAnswer(index)}
+                              className="px-2.5 py-1 rounded-full text-sm bg-[var(--color-action)]/15 border border-[var(--color-action)]/30 text-[var(--text-primary)] hover:bg-[var(--color-action)]/25"
+                              aria-label={`Remove staged response ${answer}`}
+                            >
+                              x {answer}
+                            </button>
+                          );
+                        }
+
+                        return (
+                          <span
+                            key={`${answer}-${index}`}
+                            className="px-2.5 py-1 rounded-full text-sm bg-[var(--color-action)]/15 border border-[var(--color-action)]/30 text-[var(--text-primary)]"
+                          >
+                            {answer}
+                          </span>
+                        );
+                      })}
                     </div>
                   )}
                 </div>
@@ -543,7 +588,7 @@ export function PlayerQuestionPage() {
                 size="lg"
                 fullWidth
                 onClick={handleSubmitTextAnswers}
-                disabled={locked || totalDraftAnswers === 0}
+                disabled={(locked && !canSubmitStagedAfterTimeout) || totalDraftAnswers === 0}
                 className={canUseCustomAnswer ? "mt-4" : ""}
               >
                 <Send className="w-4 h-4 mr-2" />
