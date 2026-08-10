@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { DragEvent, useState, useEffect } from "react";
 import { useQuizStore } from "@/store/quizStore";
 import { Button } from "../Button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -58,6 +58,8 @@ export function EditQuizPage({ quizId }: EditQuizPageProps) {
   const [teamBuildingSettings, setTeamBuildingSettings] =
     useState<TeamBuildingQuizSettings>(DEFAULT_TEAM_BUILDING_SETTINGS);
   const [questions, setQuestions] = useState<Question[]>([]);
+  const [draggedQuestionId, setDraggedQuestionId] = useState<string | null>(null);
+  const [dragOverQuestionId, setDragOverQuestionId] = useState<string | null>(null);
   const [originalQuiz, setOriginalQuiz] = useState<Quiz | null>(null);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -110,6 +112,135 @@ export function EditQuizPage({ quizId }: EditQuizPageProps) {
     }
     setQuestions(questions.filter((_, i) => i !== index));
     setError(null);
+  };
+
+  const reorderQuestions = (sourceQuestionId: string, targetQuestionId: string) => {
+    setQuestions((currentQuestions) => {
+      const sourceIndex = currentQuestions.findIndex((question) => question.id === sourceQuestionId);
+      const targetIndex = currentQuestions.findIndex((question) => question.id === targetQuestionId);
+
+      if (sourceIndex < 0 || targetIndex < 0 || sourceIndex === targetIndex) {
+        return currentQuestions;
+      }
+
+      const reorderedQuestions = [...currentQuestions];
+      const [movedQuestion] = reorderedQuestions.splice(sourceIndex, 1);
+      reorderedQuestions.splice(targetIndex, 0, movedQuestion);
+      return reorderedQuestions;
+    });
+    setError(null);
+  };
+
+  const handleQuestionDragStart = (
+    event: DragEvent<HTMLDivElement>,
+    questionId: string
+  ) => {
+    event.dataTransfer.setData("text/plain", questionId);
+    event.dataTransfer.effectAllowed = "move";
+    setDraggedQuestionId(questionId);
+    setDragOverQuestionId(questionId);
+  };
+
+  const resetDragState = () => {
+    setDraggedQuestionId(null);
+    setDragOverQuestionId(null);
+  };
+
+  const resolveDropTargetQuestionId = (clientY: number): string | null => {
+    const dropTargets = Array.from(
+      document.querySelectorAll<HTMLElement>("[data-question-drop-id]")
+    );
+
+    if (dropTargets.length === 0) {
+      return questions.length > 0 ? questions[questions.length - 1].id : null;
+    }
+
+    for (const target of dropTargets) {
+      const rect = target.getBoundingClientRect();
+      const midpoint = rect.top + rect.height / 2;
+      if (clientY <= midpoint) {
+        return target.dataset.questionDropId ?? null;
+      }
+    }
+
+    return dropTargets[dropTargets.length - 1].dataset.questionDropId ?? null;
+  };
+
+  const handleQuestionDragOver = (
+    event: DragEvent<HTMLDivElement>,
+    questionId: string
+  ) => {
+    if (!draggedQuestionId || draggedQuestionId === questionId) {
+      return;
+    }
+
+    event.preventDefault();
+    event.dataTransfer.dropEffect = "move";
+
+    if (dragOverQuestionId !== questionId) {
+      setDragOverQuestionId(questionId);
+    }
+  };
+
+  const handleScreenDragOver = (event: DragEvent<HTMLDivElement>) => {
+    if (!draggedQuestionId) {
+      return;
+    }
+
+    event.preventDefault();
+    event.dataTransfer.dropEffect = "move";
+
+    const targetQuestionId = resolveDropTargetQuestionId(event.clientY);
+    if (!targetQuestionId || targetQuestionId === draggedQuestionId) {
+      return;
+    }
+
+    if (dragOverQuestionId !== targetQuestionId) {
+      setDragOverQuestionId(targetQuestionId);
+    }
+  };
+
+  const handleQuestionDrop = (
+    event: DragEvent<HTMLDivElement>,
+    targetQuestionId: string
+  ) => {
+    event.stopPropagation();
+    event.preventDefault();
+
+    const sourceQuestionId = event.dataTransfer.getData("text/plain") || draggedQuestionId;
+    if (!sourceQuestionId || sourceQuestionId === targetQuestionId) {
+      resetDragState();
+      return;
+    }
+
+    reorderQuestions(sourceQuestionId, targetQuestionId);
+    resetDragState();
+  };
+
+  const handleScreenDrop = (event: DragEvent<HTMLDivElement>) => {
+    if (!draggedQuestionId) {
+      return;
+    }
+
+    event.preventDefault();
+    const sourceQuestionId = event.dataTransfer.getData("text/plain") || draggedQuestionId;
+    if (!sourceQuestionId) {
+      resetDragState();
+      return;
+    }
+
+    const targetQuestionId = resolveDropTargetQuestionId(event.clientY);
+    if (!targetQuestionId || sourceQuestionId === targetQuestionId) {
+      resetDragState();
+      return;
+    }
+
+    reorderQuestions(sourceQuestionId, targetQuestionId);
+    resetDragState();
+  };
+
+  const handleQuestionDragEnd = () => {
+    resetDragState();
   };
 
   const handleSave = () => {
@@ -224,7 +355,12 @@ export function EditQuizPage({ quizId }: EditQuizPageProps) {
   }
 
   return (
-    <div className="container mx-auto px-4 py-8 max-w-3xl">
+    <div
+      className="min-h-screen"
+      onDragOver={handleScreenDragOver}
+      onDrop={handleScreenDrop}
+    >
+      <div className="container mx-auto px-4 py-8 max-w-3xl">
       {/* Header */}
       <div className="flex items-center gap-4 mb-8">
         <button
@@ -428,14 +564,27 @@ export function EditQuizPage({ quizId }: EditQuizPageProps) {
       {/* Questions */}
       <div className="space-y-4 mb-6">
         {questions.map((question, index) => (
-          <QuestionEditor
+          <div
             key={question.id}
-            question={question}
-            quizType={quizType}
-            index={index}
-            onChange={(q) => handleUpdateQuestion(index, q)}
-            onDelete={() => handleDeleteQuestion(index)}
-          />
+            data-question-drop-id={question.id}
+            onDragOver={(event) => handleQuestionDragOver(event, question.id)}
+            onDrop={(event) => handleQuestionDrop(event, question.id)}
+            className={`rounded-xl transition-all ${
+              dragOverQuestionId === question.id && draggedQuestionId !== question.id
+                ? "ring-2 ring-[var(--color-action)]/45"
+                : ""
+            }`}
+          >
+            <QuestionEditor
+              question={question}
+              quizType={quizType}
+              index={index}
+              onChange={(q) => handleUpdateQuestion(index, q)}
+              onDelete={() => handleDeleteQuestion(index)}
+              onDragStart={(event) => handleQuestionDragStart(event, question.id)}
+              onDragEnd={handleQuestionDragEnd}
+            />
+          </div>
         ))}
       </div>
 
@@ -461,6 +610,7 @@ export function EditQuizPage({ quizId }: EditQuizPageProps) {
         <Save className="w-5 h-5 mr-2" />
         Save Changes
       </Button>
+      </div>
     </div>
   );
 }

@@ -166,6 +166,10 @@ export function PlayerQuestionPage() {
   ]);
 
   const addTextAnswer = () => {
+    if (currentQuestion?.type === "select-or-text" && !(currentQuestion.allowCustomAnswer ?? true)) {
+      return;
+    }
+
     const trimmed = textInput.trim();
     if (!trimmed) return;
 
@@ -256,7 +260,12 @@ export function PlayerQuestionPage() {
       .map((choice) => choice.text.trim())
       .filter(Boolean);
 
-    const allAnswers = deduplicateAnswers([...selectedOptionTexts, ...textAnswers]);
+    const canIncludeTextAnswers =
+      currentQuestion.type !== "select-or-text" || (currentQuestion.allowCustomAnswer ?? true);
+    const allAnswers = deduplicateAnswers([
+      ...selectedOptionTexts,
+      ...(canIncludeTextAnswers ? textAnswers : []),
+    ]);
 
     if (allAnswers.length === 0) return;
 
@@ -304,6 +313,8 @@ export function PlayerQuestionPage() {
           .map((choice, index) => ({ id: choice.id, label: getOptionLabel(index) }))
           .filter((choice) => selectedOptionIds.includes(choice.id))
       : [];
+  const canUseCustomAnswer =
+    currentQuestion.type !== "select-or-text" || (currentQuestion.allowCustomAnswer ?? true);
 
   return (
     <div className="h-screen overflow-y-auto flex flex-col px-4 py-4 max-w-2xl mx-auto">
@@ -369,7 +380,11 @@ export function PlayerQuestionPage() {
             {currentQuestion.type === "select-or-text" && selectableChoices.length > 0 && (
               <div className="glass-card p-4 space-y-2">
                 <div className="flex items-center justify-between gap-3">
-                  <p className="text-sm text-[var(--text-secondary)]">Select options and/or add your own answer</p>
+                  <p className="text-sm text-[var(--text-secondary)]">
+                    {canUseCustomAnswer
+                      ? "Select options and/or add your own answer"
+                      : "Select one or more configured options"}
+                  </p>
                   <span className="text-xs font-semibold px-2 py-1 rounded-full border border-white/20 text-[var(--text-secondary)]">
                     {totalDraftAnswers}/{maxAnswers}
                   </span>
@@ -423,92 +438,103 @@ export function PlayerQuestionPage() {
                     Maximum of {maxAnswers} combined answers reached. Remove one to add another.
                   </p>
                 )}
+                {!locked && !canUseCustomAnswer && (
+                  <p className="text-xs text-[var(--text-secondary)]">
+                    Custom answers are disabled for this question.
+                  </p>
+                )}
               </div>
             )}
 
             <div className="glass-card p-4">
-              <p className="text-sm text-[var(--text-secondary)] mb-2">
-                Add up to {maxAnswers} answer{maxAnswers !== 1 ? "s" : ""}
-                {!locked ? ` - ${remainingAnswers} remaining` : ""}
-              </p>
-              <div className="space-y-2">
-                <input
-                  type="text"
-                  value={textInput}
-                  onChange={(e) => setTextInput(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") {
-                      e.preventDefault();
-                      addTextAnswer();
-                    }
-                  }}
-                  placeholder="Type your answer"
-                  disabled={locked || remainingAnswers === 0}
-                  className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-[var(--text-primary)] placeholder:text-[var(--text-secondary)]/50 focus:outline-none focus:ring-2 focus:ring-[var(--color-action)]/50 focus:border-[var(--color-action)]"
-                />
-                {!locked && (
-                  <p className="text-xs text-[var(--text-secondary)]">
-                    {hasUnstagedDraft
-                      ? "Draft not staged yet. Tap Add response to include it in your submission."
-                      : "Type a response and tap Add response to stage it before submitting."}
+              {canUseCustomAnswer && (
+                <>
+                  <p className="text-sm text-[var(--text-secondary)] mb-2">
+                    Add up to {maxAnswers} answer{maxAnswers !== 1 ? "s" : ""}
+                    {!locked ? ` - ${remainingAnswers} remaining` : ""}
                   </p>
-                )}
-              </div>
-
-              <Button
-                type="button"
-                variant="primary"
-                size="md"
-                fullWidth
-                onClick={addTextAnswer}
-                disabled={locked || remainingAnswers === 0 || !textInput.trim()}
-                className="mt-3 bg-[#6D8CF7] hover:bg-[#5C7DEB]"
-                aria-label="Add response to staging"
-              >
-                <Plus className="w-5 h-5 mr-2" />
-                Add response
-              </Button>
-
-              <div className="mt-3 rounded-lg border border-white/10 bg-black/20 p-3">
-                <div className="flex items-center justify-between gap-3 mb-2">
-                  <p className="text-sm font-medium text-[var(--text-primary)]">Staged responses (not sent yet)</p>
-                  <span className="text-xs px-2 py-1 rounded-full border border-white/20 text-[var(--text-secondary)]">
-                    {totalDraftAnswers}/{maxAnswers}
-                  </span>
-                </div>
-
-                {totalDraftAnswers === 0 ? (
-                  <p className="text-xs text-[var(--text-secondary)]">
-                    No staged responses yet. Add responses above, then tap Submit response to send them.
-                  </p>
-                ) : (
-                  <div className="flex flex-wrap gap-2">
-                    {stagedSelectOrTextOptions.map((option) => (
-                      <button
-                        key={`staged-option-${option.id}`}
-                        type="button"
-                        onClick={() => toggleSelectOrTextOption(option.id)}
-                        disabled={locked}
-                        className="px-2.5 py-1 rounded-full text-sm bg-white/10 border border-white/20 text-[var(--text-primary)] hover:bg-white/15"
-                      >
-                        Option {option.label}
-                      </button>
-                    ))}
-
-                    {textAnswers.map((answer, index) => (
-                      <button
-                        key={`${answer}-${index}`}
-                        type="button"
-                        onClick={() => removeTextAnswer(index)}
-                        disabled={locked}
-                        className="px-2.5 py-1 rounded-full text-sm bg-[var(--color-action)]/15 border border-[var(--color-action)]/30 text-[var(--text-primary)] hover:bg-[var(--color-action)]/25"
-                      >
-                        {answer}
-                      </button>
-                    ))}
+                  <div className="space-y-2">
+                    <input
+                      type="text"
+                      value={textInput}
+                      onChange={(e) => setTextInput(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") {
+                          e.preventDefault();
+                          addTextAnswer();
+                        }
+                      }}
+                      placeholder="Type your answer"
+                      disabled={locked || remainingAnswers === 0}
+                      className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-[var(--text-primary)] placeholder:text-[var(--text-secondary)]/50 focus:outline-none focus:ring-2 focus:ring-[var(--color-action)]/50 focus:border-[var(--color-action)]"
+                    />
+                    {!locked && (
+                      <p className="text-xs text-[var(--text-secondary)]">
+                        {hasUnstagedDraft
+                          ? "Draft not staged yet. Tap Add response to include it in your submission."
+                          : "Type a response and tap Add response to stage it before submitting."}
+                      </p>
+                    )}
                   </div>
-                )}
-              </div>
+
+                  <Button
+                    type="button"
+                    variant="primary"
+                    size="md"
+                    fullWidth
+                    onClick={addTextAnswer}
+                    disabled={locked || remainingAnswers === 0 || !textInput.trim()}
+                    className="mt-3 bg-[#6D8CF7] hover:bg-[#5C7DEB]"
+                    aria-label="Add response to staging"
+                  >
+                    <Plus className="w-5 h-5 mr-2" />
+                    Add response
+                  </Button>
+                </>
+              )}
+
+              {canUseCustomAnswer && (
+                <div className="mt-3 rounded-lg border border-white/10 bg-black/20 p-3">
+                  <div className="flex items-center justify-between gap-3 mb-2">
+                    <p className="text-sm font-medium text-[var(--text-primary)]">Staged responses (not sent yet)</p>
+                    <span className="text-xs px-2 py-1 rounded-full border border-white/20 text-[var(--text-secondary)]">
+                      {totalDraftAnswers}/{maxAnswers}
+                    </span>
+                  </div>
+
+                  {totalDraftAnswers === 0 ? (
+                    <p className="text-xs text-[var(--text-secondary)]">
+                      No staged responses yet. Add responses above, then tap Submit response to send them.
+                    </p>
+                  ) : (
+                    <div className="flex flex-wrap gap-2">
+                      {stagedSelectOrTextOptions.map((option) => (
+                        <button
+                          key={`staged-option-${option.id}`}
+                          type="button"
+                          onClick={() => toggleSelectOrTextOption(option.id)}
+                          disabled={locked}
+                          className="px-2.5 py-1 rounded-full text-sm bg-white/10 border border-white/20 text-[var(--text-primary)] hover:bg-white/15"
+                        >
+                          Option {option.label}
+                        </button>
+                      ))}
+
+                      {textAnswers.map((answer, index) => (
+                        <button
+                          key={`${answer}-${index}`}
+                          type="button"
+                          onClick={() => removeTextAnswer(index)}
+                          disabled={locked}
+                          className="px-2.5 py-1 rounded-full text-sm bg-[var(--color-action)]/15 border border-[var(--color-action)]/30 text-[var(--text-primary)] hover:bg-[var(--color-action)]/25"
+                        >
+                          {answer}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
 
               <Button
                 type="button"
@@ -517,7 +543,7 @@ export function PlayerQuestionPage() {
                 fullWidth
                 onClick={handleSubmitTextAnswers}
                 disabled={locked || totalDraftAnswers === 0}
-                className="mt-4"
+                className={canUseCustomAnswer ? "mt-4" : ""}
               >
                 <Send className="w-4 h-4 mr-2" />
                 Submit response

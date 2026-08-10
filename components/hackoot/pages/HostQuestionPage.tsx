@@ -10,7 +10,7 @@ import { navigate } from "../HackootApp";
 import { Users, Eye, Zap } from "lucide-react";
 import { HostPeer } from "@/transport/peer";
 import { calculateKahootPoints, getResponseTime, sanitizeQuestionTimeLimit } from "@/utils/scoring";
-import { getSelectableChoices, resolveQuizType } from "@/utils/teamBuilding";
+import { getSelectableChoices, normaliseAnswer, resolveQuizType } from "@/utils/teamBuilding";
 
 interface HostQuestionPageProps {
   quizId: string;
@@ -41,6 +41,7 @@ export function HostQuestionPage({ quizId }: HostQuestionPageProps) {
   const questionDuration = sanitizeQuestionTimeLimit(currentQuestion?.timeLimit);
   const quizType = resolveQuizType(quiz?.quizType);
   const isTeamBuilding = quizType === "team-building";
+  const isDiscussionVotingEnabled = quiz?.teamBuildingSettings?.enableDiscussionVoting ?? true;
 
   useEffect(() => {
     if (!quiz || !session || !hostPeer || initialized) {
@@ -96,7 +97,20 @@ export function HostQuestionPage({ quizId }: HostQuestionPageProps) {
         return;
       }
       if (questionId !== question.id) return;
-      const cleanedAnswers = answers.map((answer) => answer.trim()).filter(Boolean);
+      let cleanedAnswers = answers.map((answer) => answer.trim()).filter(Boolean);
+
+      if (question.type === "select-or-text" && !(question.allowCustomAnswer ?? true)) {
+        const allowedOptionKeys = new Set(
+          question.options
+            .map((option) => normaliseAnswer(option.text))
+            .filter((key): key is string => key.length > 0)
+        );
+        cleanedAnswers = cleanedAnswers.filter((answer) => {
+          const normalised = normaliseAnswer(answer);
+          return normalised.length > 0 && allowedOptionKeys.has(normalised);
+        });
+      }
+
       recordTeamTextAnswers(participantId, questionId, cleanedAnswers, submittedAt);
     };
   }, [
@@ -152,7 +166,9 @@ export function HostQuestionPage({ quizId }: HostQuestionPageProps) {
         questionId: currentQuestion.id,
         submissionCount,
       });
-      setSessionState(currentQuestion.type === "discussion" ? "team-voting" : "team-results");
+      const shouldOpenDiscussionVoting =
+        currentQuestion.type === "discussion" && isDiscussionVotingEnabled;
+      setSessionState(shouldOpenDiscussionVoting ? "team-voting" : "team-results");
     }
     navigate(`/host/${quizId}/results`);
   };
@@ -255,7 +271,7 @@ export function HostQuestionPage({ quizId }: HostQuestionPageProps) {
         <Eye className="w-5 h-5 mr-2" />
         {canReveal
           ? isTeamBuilding
-            ? currentQuestion.type === "discussion"
+            ? currentQuestion.type === "discussion" && isDiscussionVotingEnabled
               ? "Open Voting"
               : "Show Team Results"
             : "Reveal Answers"
