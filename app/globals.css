@@ -84,12 +84,12 @@ html, body {
 }
 
 html {
-  background: #0D0118;
+  background: var(--gradient-bg);
 }
 
 body {
   min-height: 100dvh;
-  background: var(--gradient-bg);
+  background: transparent;
   overscroll-behavior-x: none;
 }
 
