@@ -94,6 +94,9 @@ export function ClusterView({
                 showParticipantAvatars &&
                 enableParticipantList &&
                 clusterParticipants.length > 0;
+              const groupedVariants = (cluster.answerTexts ?? []).filter(
+                (answerText) => answerText !== cluster.canonicalText
+              );
 
               return (
                 <div
@@ -115,7 +118,14 @@ export function ClusterView({
                     : undefined}
                   aria-label={canOpenParticipantList ? `View participants for ${cluster.canonicalText}` : undefined}
                 >
-                  <span className="text-[var(--text-primary)] break-words">{cluster.canonicalText}</span>
+                  <div className="min-w-0">
+                    <p className="text-[var(--text-primary)] break-words">{cluster.canonicalText}</p>
+                    {groupedVariants.length > 0 && (
+                      <p className="mt-0.5 text-xs text-[var(--text-secondary)] break-words">
+                        Also grouped: {groupedVariants.join(", ")}
+                      </p>
+                    )}
+                  </div>
 
                   {showParticipantAvatars ? (
                     <div className="flex items-center gap-2 shrink-0">

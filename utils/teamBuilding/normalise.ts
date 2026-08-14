@@ -20,7 +20,7 @@ export function normaliseAnswer(raw: string, options: NormaliseOptions = {}): st
   const stripped = raw
     .trim()
     .toLowerCase()
-    .replace(/^[\p{P}\p{S}]+|[\p{P}\p{S}]+$/gu, "")
+    .replace(/^[^\p{L}\p{N}#+]+|[^\p{L}\p{N}#+]+$/gu, "")
     .replace(/\s+/g, " ");
 
   if (!stripped) {
