@@ -7,6 +7,7 @@ const SINGLE_SHARED_TOKEN_THRESHOLD = 0.78;
 const HIGH_CONFIDENCE_STRING_MATCH_THRESHOLD = 0.9;
 const SINGLE_TOKEN_STRING_MATCH_THRESHOLD = 0.94;
 const MIN_COMPACT_KEY_LENGTH_FOR_FUZZY = 4;
+const MAX_PREFIX_EXPANSION_LENGTH = 3;
 const TOKEN_STOP_WORDS = new Set([
   "a",
   "an",
@@ -49,6 +50,10 @@ export interface RawTeamAnswer {
 export interface GroupAnswersResult {
   clusters: TeamAnswerCluster[];
   unresolved: RawTeamAnswer[];
+}
+
+export interface GroupAnswersOptions extends NormaliseOptions {
+  enableFuzzyGrouping?: boolean;
 }
 
 interface ClusterBucket {
@@ -178,6 +183,49 @@ function scoreStringSimilarity(left: string, right: string): number {
   return (2 * overlap) / (leftCount + rightCount);
 }
 
+function isSingleEditApart(left: string, right: string): boolean {
+  if (left === right || Math.abs(left.length - right.length) > 1) {
+    return false;
+  }
+
+  const shorter = left.length <= right.length ? left : right;
+  const longer = left.length <= right.length ? right : left;
+  let shorterIndex = 0;
+  let longerIndex = 0;
+  let edits = 0;
+
+  while (shorterIndex < shorter.length && longerIndex < longer.length) {
+    if (shorter[shorterIndex] === longer[longerIndex]) {
+      shorterIndex += 1;
+      longerIndex += 1;
+      continue;
+    }
+
+    edits += 1;
+    if (edits > 1) {
+      return false;
+    }
+
+    if (shorter.length === longer.length) {
+      shorterIndex += 1;
+    }
+    longerIndex += 1;
+  }
+
+  return true;
+}
+
+function isShortPrefixExpansion(left: string, right: string): boolean {
+  const shorter = left.length <= right.length ? left : right;
+  const longer = left.length <= right.length ? right : left;
+
+  return (
+    shorter.length >= MIN_COMPACT_KEY_LENGTH_FOR_FUZZY &&
+    longer.length - shorter.length <= MAX_PREFIX_EXPANSION_LENGTH &&
+    longer.startsWith(shorter)
+  );
+}
+
 function scoreTokenSimilarity(
   left: Set<string>,
   right: Set<string>
@@ -258,10 +306,18 @@ function findSimilarBucket(
       sharedTokenCount === 1 &&
       tokenScore >= SINGLE_SHARED_TOKEN_THRESHOLD &&
       stringScore >= HIGH_CONFIDENCE_STRING_MATCH_THRESHOLD;
+    const singleTokenVariantMatch = Array.from(bucket.aliasKeys).some((aliasKey) => {
+      const compactAliasKey = buildCompactKey(aliasKey);
+      return (
+        isSingleEditApart(compactKey, compactAliasKey) ||
+        isShortPrefixExpansion(compactKey, compactAliasKey)
+      );
+    });
     const singleTokenMatch =
       allowStringFuzzy &&
       (tokens.size <= 1 || comparisonTokens.size <= 1) &&
-      stringScore >= SINGLE_TOKEN_STRING_MATCH_THRESHOLD;
+      (stringScore >= SINGLE_TOKEN_STRING_MATCH_THRESHOLD ||
+        singleTokenVariantMatch);
 
     if (!phraseMatch && !singleSharedTokenMatch && !singleTokenMatch) {
       continue;
@@ -297,7 +353,7 @@ function addAnswerToBucket(
 
 export function groupAnswersByNormalisedText(
   answers: RawTeamAnswer[],
-  options: NormaliseOptions = {}
+  options: GroupAnswersOptions = {}
 ): GroupAnswersResult {
   const bucketsByCanonicalText = new Map<string, ClusterBucket>();
   const buckets: ClusterBucket[] = [];
@@ -318,7 +374,9 @@ export function groupAnswersByNormalisedText(
       continue;
     }
 
-    const similarBucket = findSimilarBucket(key, answerTokens, buckets);
+    const similarBucket = options.enableFuzzyGrouping
+      ? findSimilarBucket(key, answerTokens, buckets)
+      : null;
     if (similarBucket) {
       addAnswerToBucket(similarBucket, answer, key, answerTokens);
       bucketsByCanonicalText.set(key, similarBucket);
@@ -348,6 +406,9 @@ export function groupAnswersByNormalisedText(
       return {
         id: `cluster-${index + 1}`,
         canonicalText: bucket.canonicalText,
+        answerTexts: Array.from(
+          new Set(bucket.groupedAnswers.map((entry) => entry.text.trim()))
+        ),
         answerIds: bucket.groupedAnswers.map((entry) => entry.answerId),
         participantIds: Array.from(bucket.participantIds),
         count: bucket.groupedAnswers.length,
