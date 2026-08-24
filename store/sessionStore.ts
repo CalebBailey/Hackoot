@@ -52,6 +52,12 @@ interface TeamResultsSnapshot {
   participants?: ParticipantDirectoryEntry[];
 }
 
+interface TeamGraphSnapshot {
+  teamClusters: Record<string, TeamAnswerCluster[]>;
+  teamDiscussionQueue: Record<string, DiscussionQueueItem[]>;
+  teamQuestionPrompts: Record<string, string>;
+}
+
 interface SessionStore {
   session: Session | null;
   peerError: string | null;
@@ -101,6 +107,7 @@ interface SessionStore {
   recordTeamVotes: (participantId: string, questionId: string, answerIds: string[], submittedAt: number) => void;
   setTeamVoteContext: (ctx: TeamVoteContext | null) => void;
   setTeamResultsSnapshot: (snapshot: TeamResultsSnapshot | null, sessionState?: TeamResultSessionState) => void;
+  setTeamGraphSnapshot: (snapshot: TeamGraphSnapshot | null) => void;
   markParticipantAnswered: (participantId: string) => void;
   revealAnswer: () => void;
   updateLeaderboard: (leaderboard: LeaderboardEntry[], pointsAwarded: number) => void;
@@ -485,6 +492,29 @@ export const useSessionStore = create<SessionStore>((set, get) => ({
           },
         },
         teamResultsSnapshot: snapshot,
+      };
+    });
+  },
+
+  setTeamGraphSnapshot: (snapshot) => {
+    set((state) => {
+      if (!state.session || !snapshot) {
+        return state;
+      }
+
+      return {
+        session: {
+          ...state.session,
+          teamClusters: {
+            ...snapshot.teamClusters,
+          },
+          teamDiscussionQueue: {
+            ...snapshot.teamDiscussionQueue,
+          },
+          teamQuestionPrompts: {
+            ...snapshot.teamQuestionPrompts,
+          },
+        },
       };
     });
   },

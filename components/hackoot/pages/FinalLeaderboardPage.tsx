@@ -6,9 +6,16 @@ import { Button } from "../Button";
 import { navigate } from "../HackootApp";
 import { Trophy, Download, Home, Medal } from "lucide-react";
 import { exportSessionResults } from "@/utils/quizStorage";
-import { clearPlayerSession } from "@/utils/playerSession";
+import {
+  clearPlayerResumeTarget,
+  clearPlayerSession,
+  loadPlayerSession,
+  savePlayerResumeTarget,
+} from "@/utils/playerSession";
 import { resolveQuizType } from "@/utils/teamBuilding";
 import { InterestMatchGraph } from "../InterestMatchGraph";
+import { PlayerPeer } from "@/transport/peer";
+import { generateUUID } from "@/lib/utils";
 
 // Delays (ms) for each place to begin animating - 3rd first, 2nd second, 1st last
 const PODIUM_DELAYS = { third: 0, second: 700, first: 1400 };
@@ -20,6 +27,9 @@ export function FinalLeaderboardPage() {
   const isHost = useSessionStore((state) => state.isHost);
   const participantId = useSessionStore((state) => state.participantId);
   const getLeaderboard = useSessionStore((state) => state.getLeaderboard);
+  const setParticipant = useSessionStore((state) => state.setParticipant);
+  const setIsHost = useSessionStore((state) => state.setIsHost);
+  const initSession = useSessionStore((state) => state.initSession);
   const reset = useSessionStore((state) => state.reset);
 
   const [thirdVisible, setThirdVisible] = useState(false);
@@ -28,6 +38,8 @@ export function FinalLeaderboardPage() {
   const [thirdCardVisible, setThirdCardVisible] = useState(false);
   const [secondCardVisible, setSecondCardVisible] = useState(false);
   const [firstCardVisible, setFirstCardVisible] = useState(false);
+  const [isRejoiningSession, setIsRejoiningSession] = useState(false);
+  const [rejoinError, setRejoinError] = useState<string | null>(null);
 
   const leaderboard = getLeaderboard();
   const isTeamBuilding = resolveQuizType(session?.quizType) === "team-building";
@@ -42,6 +54,61 @@ export function FinalLeaderboardPage() {
     timers.push(setTimeout(() => setFirstCardVisible(true), PODIUM_DELAYS.first + CARD_AFTER_BAR));
     return () => timers.forEach(clearTimeout);
   }, []);
+
+  useEffect(() => {
+    if (session || isHost || (window as any).__hackootPlayerPeer) {
+      return;
+    }
+
+    const cachedSession = loadPlayerSession();
+    if (!cachedSession) {
+      return;
+    }
+
+    let active = true;
+    setRejoinError(null);
+    setIsRejoiningSession(true);
+
+    const playerPeer = new PlayerPeer();
+    playerPeer.onError = (errorMessage) => {
+      if (!active) {
+        return;
+      }
+
+      setRejoinError(errorMessage);
+      setIsRejoiningSession(false);
+    };
+
+    playerPeer
+      .connect(cachedSession.roomCode, cachedSession.participantId, cachedSession.name)
+      .then(() => {
+        if (!active) {
+          playerPeer.disconnect();
+          return;
+        }
+
+        (window as any).__hackootPlayerPeer = playerPeer;
+        setParticipant(cachedSession.participantId, cachedSession.name);
+        setIsHost(false);
+        initSession(generateUUID(), "", cachedSession.roomCode, "standard");
+        setIsRejoiningSession(false);
+        savePlayerResumeTarget("play/final");
+        navigate("/play/lobby");
+      })
+      .catch((error) => {
+        if (!active) {
+          return;
+        }
+
+        clearPlayerResumeTarget();
+        setRejoinError((error as Error).message);
+        setIsRejoiningSession(false);
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [initSession, isHost, session, setIsHost, setParticipant]);
 
   const handleDownload = () => {
     if (!session) return;
@@ -70,6 +137,7 @@ export function FinalLeaderboardPage() {
     (window as any).__hackootHostPeer = null;
     (window as any).__hackootPlayerPeer = null;
     clearPlayerSession();
+    clearPlayerResumeTarget();
     reset();
     navigate("/");
   };
@@ -77,6 +145,28 @@ export function FinalLeaderboardPage() {
   const top3 = leaderboard.slice(0, 3);
   const rest = leaderboard.slice(3);
   const totalResponses = session?.answers.length ?? 0;
+
+  if (!session && isRejoiningSession) {
+    return (
+      <div className="container mx-auto px-4 py-8 max-w-md min-h-screen flex flex-col justify-center">
+        <div className="glass-card p-8 text-center">
+          <div className="animate-spin w-12 h-12 border-4 border-white/20 border-t-[var(--color-action)] rounded-full mx-auto mb-4" />
+          <p className="text-[var(--text-secondary)]">Reconnecting to session...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!session && rejoinError) {
+    return (
+      <div className="container mx-auto px-4 py-8 max-w-md min-h-screen flex flex-col justify-center">
+        <div className="glass-card p-8 text-center">
+          <p className="text-[var(--text-secondary)] mb-4">{rejoinError}</p>
+          <Button variant="primary" onClick={() => navigate("/join")}>Rejoin Game</Button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="container mx-auto px-4 py-8 max-w-2xl">

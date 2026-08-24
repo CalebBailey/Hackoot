@@ -339,6 +339,7 @@ export function HostResultsPage({ quizId }: HostResultsPageProps) {
         type: "sessionEnded",
         finalLeaderboard,
       });
+      setSessionState("ended");
       // Host also goes to the final leaderboard view
       navigate("/play/final");
     } else {

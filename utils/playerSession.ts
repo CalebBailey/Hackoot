@@ -1,4 +1,5 @@
 const SESSION_KEY = "hackoot_player_session";
+const RESUME_TARGET_KEY = "hackoot_player_resume_target";
 
 export interface CachedPlayerSession {
   participantId: string;
@@ -27,6 +28,30 @@ export function loadPlayerSession(): CachedPlayerSession | null {
 export function clearPlayerSession(): void {
   try {
     sessionStorage.removeItem(SESSION_KEY);
+  } catch {
+    // ignore
+  }
+}
+
+export function savePlayerResumeTarget(targetRoute: string): void {
+  try {
+    sessionStorage.setItem(RESUME_TARGET_KEY, targetRoute);
+  } catch {
+    // sessionStorage may be unavailable in some private-browsing environments
+  }
+}
+
+export function loadPlayerResumeTarget(): string | null {
+  try {
+    return sessionStorage.getItem(RESUME_TARGET_KEY);
+  } catch {
+    return null;
+  }
+}
+
+export function clearPlayerResumeTarget(): void {
+  try {
+    sessionStorage.removeItem(RESUME_TARGET_KEY);
   } catch {
     // ignore
   }

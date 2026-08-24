@@ -244,5 +244,10 @@ export type PeerMessage =
         discussionQueue: DiscussionQueueItem[];
         participants?: ParticipantDirectoryEntry[];
       };
+      teamGraphSnapshot?: {
+        teamClusters: Record<string, TeamAnswerCluster[]>;
+        teamDiscussionQueue: Record<string, DiscussionQueueItem[]>;
+        teamQuestionPrompts: Record<string, string>;
+      };
       participants?: ParticipantDirectoryEntry[];
     };
