@@ -228,6 +228,7 @@ export type PeerMessage =
       question?: PublicQuestion;
       questionIndex?: number;
       totalQuestions?: number;
+      startedAt?: number;
       questionDuration?: number;
       discussionIntroParticipantIds?: string[];
       leaderboard?: LeaderboardEntry[];

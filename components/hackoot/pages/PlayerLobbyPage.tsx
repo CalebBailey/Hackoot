@@ -66,7 +66,9 @@ export function PlayerLobbyPage() {
           message.questionIndex,
           runtimeQuestion,
           message.questionDuration,
-          message.discussionIntroParticipantIds ?? []
+          message.discussionIntroParticipantIds ?? [],
+          message.startedAt,
+          false
         );
         navigate("/play/question");
       } else if (message.type === "rejoinAck" && message.participantId === participantId) {
@@ -82,14 +84,17 @@ export function PlayerLobbyPage() {
         if ((message.sessionState === "question" || message.sessionState === "team-submission") && message.question !== undefined) {
           const runtimeQuestion = toRuntimeQuestion(message);
           if (!runtimeQuestion) return;
-          setHasAnsweredCurrentQuestion(message.answeredCurrentQuestion ?? false);
+          const answeredCurrentQuestion = message.answeredCurrentQuestion ?? false;
+          setHasAnsweredCurrentQuestion(answeredCurrentQuestion);
           setCurrentQuestion(runtimeQuestion);
           setSessionState(message.sessionState);
           startQuestion(
             message.questionIndex!,
             runtimeQuestion,
             message.questionDuration,
-            message.discussionIntroParticipantIds ?? []
+            message.discussionIntroParticipantIds ?? [],
+            message.startedAt,
+            answeredCurrentQuestion
           );
           navigate("/play/question");
         } else if (message.sessionState === "team-voting") {

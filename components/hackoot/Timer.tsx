@@ -6,10 +6,21 @@ interface TimerProps {
   totalSeconds: number;
   onExpire: () => void;
   running: boolean;
+  startedAt?: number | null;
 }
 
-export function Timer({ totalSeconds, onExpire, running }: TimerProps) {
-  const [timeRemaining, setTimeRemaining] = useState(totalSeconds);
+function calculateRemainingSeconds(totalSeconds: number, startedAt?: number | null): number {
+  if (typeof startedAt !== "number" || !Number.isFinite(startedAt)) {
+    return totalSeconds;
+  }
+
+  const questionDeadline = startedAt + totalSeconds * 1000;
+  const millisecondsRemaining = questionDeadline - Date.now();
+  return Math.max(0, Math.ceil(millisecondsRemaining / 1000));
+}
+
+export function Timer({ totalSeconds, onExpire, running, startedAt = null }: TimerProps) {
+  const [timeRemaining, setTimeRemaining] = useState(() => calculateRemainingSeconds(totalSeconds, startedAt));
   const onExpireRef = useRef(onExpire);
   const hasExpiredRef = useRef(false);
 
@@ -18,9 +29,9 @@ export function Timer({ totalSeconds, onExpire, running }: TimerProps) {
   }, [onExpire]);
 
   useEffect(() => {
-    setTimeRemaining(totalSeconds);
+    setTimeRemaining(calculateRemainingSeconds(totalSeconds, startedAt));
     hasExpiredRef.current = false;
-  }, [totalSeconds]);
+  }, [totalSeconds, startedAt]);
 
   useEffect(() => {
     if (!running) return;
@@ -28,6 +39,15 @@ export function Timer({ totalSeconds, onExpire, running }: TimerProps) {
 
     const interval = setInterval(() => {
       setTimeRemaining((prev) => {
+        if (typeof startedAt === "number" && Number.isFinite(startedAt)) {
+          const next = calculateRemainingSeconds(totalSeconds, startedAt);
+          if (next <= 0) {
+            clearInterval(interval);
+            return 0;
+          }
+          return next;
+        }
+
         if (prev <= 1) {
           clearInterval(interval);
           return 0;
@@ -37,7 +57,7 @@ export function Timer({ totalSeconds, onExpire, running }: TimerProps) {
     }, 1000);
 
     return () => clearInterval(interval);
-  }, [running]);
+  }, [running, startedAt, totalSeconds]);
 
   // Call onExpire outside the state updater to avoid updating parent during render
   useEffect(() => {
@@ -47,7 +67,7 @@ export function Timer({ totalSeconds, onExpire, running }: TimerProps) {
     }
   }, [timeRemaining]);
 
-  const percentage = (timeRemaining / totalSeconds) * 100;
+  const percentage = totalSeconds > 0 ? (timeRemaining / totalSeconds) * 100 : 0;
   
   const getColor = () => {
     if (percentage > 50) return "#10B981"; // emerald

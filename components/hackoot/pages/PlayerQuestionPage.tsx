@@ -92,12 +92,20 @@ export function PlayerQuestionPage() {
   const setSessionState = useSessionStore((state) => state.setSessionState);
   const setSessionParticipants = useSessionStore((state) => state.setSessionParticipants);
 
+  const resolvedQuestionDuration = currentQuestionDuration || DEFAULT_QUESTION_TIME_LIMIT;
+  const questionStartedAt = session?.questionStartedAt ?? null;
+  const questionDeadlineAt =
+    typeof questionStartedAt === "number"
+      ? questionStartedAt + resolvedQuestionDuration * 1000
+      : null;
+  const isQuestionExpired = questionDeadlineAt !== null && Date.now() >= questionDeadlineAt;
+
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [selectedOptionIds, setSelectedOptionIds] = useState<string[]>([]);
   const [textInput, setTextInput] = useState("");
   const [textAnswers, setTextAnswers] = useState<string[]>([]);
-  const [locked, setLocked] = useState(hasAnsweredCurrentQuestion);
-  const [timerRunning, setTimerRunning] = useState(!hasAnsweredCurrentQuestion);
+  const [locked, setLocked] = useState(hasAnsweredCurrentQuestion || isQuestionExpired);
+  const [timerRunning, setTimerRunning] = useState(!hasAnsweredCurrentQuestion && !isQuestionExpired);
 
   const playerPeer = (window as any).__hackootPlayerPeer as PlayerPeer | undefined;
   const isTeamBuilding =
@@ -110,8 +118,10 @@ export function PlayerQuestionPage() {
       return;
     }
 
-    // If this is a normal new question (not a rejoin), reset the answered state
-    if (!hasAnsweredCurrentQuestion) {
+    if (hasAnsweredCurrentQuestion || isQuestionExpired) {
+      setLocked(true);
+      setTimerRunning(false);
+    } else {
       setSelectedId(null);
       setSelectedOptionIds([]);
       setTextInput("");
@@ -159,13 +169,28 @@ export function PlayerQuestionPage() {
     participantId,
     updateLeaderboard,
     hasAnsweredCurrentQuestion,
+    isQuestionExpired,
     setSessionState,
     setSessionParticipants,
     setTeamResultsSnapshot,
     setTeamVoteContext,
   ]);
 
+  const isSubmissionClosed = useCallback(() => {
+    if (locked || hasAnsweredCurrentQuestion) {
+      return true;
+    }
+
+    return questionDeadlineAt !== null && Date.now() >= questionDeadlineAt;
+  }, [locked, hasAnsweredCurrentQuestion, questionDeadlineAt]);
+
   const addTextAnswer = () => {
+    if (isSubmissionClosed()) {
+      setLocked(true);
+      setTimerRunning(false);
+      return;
+    }
+
     if (currentQuestion?.type === "select-or-text" && !(currentQuestion.allowCustomAnswer ?? true)) {
       return;
     }
@@ -204,7 +229,7 @@ export function PlayerQuestionPage() {
   };
 
   const toggleSelectOrTextOption = (choiceId: string) => {
-    if (locked) return;
+    if (locked || isSubmissionClosed()) return;
     if (!currentQuestion || currentQuestion.type !== "select-or-text") return;
 
     const optionIsSelected = selectedOptionIds.includes(choiceId);
@@ -224,7 +249,11 @@ export function PlayerQuestionPage() {
   };
 
   const handleSelect = (choiceId: string) => {
-    if (locked || !playerPeer || !currentQuestion) return;
+    if (!playerPeer || !currentQuestion || !participantId || isSubmissionClosed()) {
+      setLocked(true);
+      setTimerRunning(false);
+      return;
+    }
 
     setSelectedId(choiceId);
     setLocked(true);
@@ -234,7 +263,7 @@ export function PlayerQuestionPage() {
     if (currentQuestion.type === "mcq") {
       playerPeer.send({
         type: "submitAnswer",
-        participantId: participantId!,
+        participantId,
         questionId: currentQuestion.id,
         choiceId,
         submittedAt: Date.now(),
@@ -244,7 +273,7 @@ export function PlayerQuestionPage() {
 
     playerPeer.send({
       type: "submitChoiceAnswer",
-      participantId: participantId!,
+      participantId,
       questionId: currentQuestion.id,
       choiceId,
       submittedAt: Date.now(),
@@ -252,7 +281,11 @@ export function PlayerQuestionPage() {
   };
 
   const handleSubmitTextAnswers = () => {
-    if (locked || !playerPeer || !currentQuestion || !participantId) return;
+    if (!playerPeer || !currentQuestion || !participantId || isSubmissionClosed()) {
+      setLocked(true);
+      setTimerRunning(false);
+      return;
+    }
 
     const selectableChoices = getSelectableChoices(currentQuestion);
     const selectedOptionTexts = selectableChoices
@@ -338,9 +371,10 @@ export function PlayerQuestionPage() {
       {/* Timer */}
       <div className="flex justify-center mb-4">
         <Timer
-          totalSeconds={currentQuestionDuration || DEFAULT_QUESTION_TIME_LIMIT}
+          totalSeconds={resolvedQuestionDuration}
           onExpire={handleTimerExpire}
           running={timerRunning}
+          startedAt={questionStartedAt}
         />
       </div>
 

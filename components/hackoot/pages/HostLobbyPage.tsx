@@ -112,6 +112,7 @@ export function HostLobbyPage({ quizId }: HostLobbyPageProps) {
                 question: publicQuestion,
                 questionIndex: qIdx!,
                 totalQuestions: quiz?.questions.length ?? 0,
+                startedAt: updatedSession.questionStartedAt ?? undefined,
                 questionDuration: sanitizeQuestionTimeLimit(currentQuestion.timeLimit),
                 answeredCurrentQuestion: existingParticipant.answeredCurrentQuestion,
                 discussionIntroParticipantIds: storeSnapshot.discussionIntroParticipantIds,
