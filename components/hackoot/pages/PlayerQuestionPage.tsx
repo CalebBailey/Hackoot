@@ -105,7 +105,7 @@ export function PlayerQuestionPage() {
   const [textInput, setTextInput] = useState("");
   const [textAnswers, setTextAnswers] = useState<string[]>([]);
   const [locked, setLocked] = useState(hasAnsweredCurrentQuestion || isQuestionExpired);
-  const [timerRunning, setTimerRunning] = useState(!hasAnsweredCurrentQuestion && !isQuestionExpired);
+  const [timerRunning, setTimerRunning] = useState(!isQuestionExpired);
 
   const playerPeer = (window as any).__hackootPlayerPeer as PlayerPeer | undefined;
   const isTeamBuilding =
@@ -118,9 +118,12 @@ export function PlayerQuestionPage() {
       return;
     }
 
-    if (hasAnsweredCurrentQuestion || isQuestionExpired) {
+    if (isQuestionExpired) {
       setLocked(true);
       setTimerRunning(false);
+    } else if (hasAnsweredCurrentQuestion) {
+      setLocked(true);
+      setTimerRunning(true);
     } else {
       setSelectedId(null);
       setSelectedOptionIds([]);
@@ -187,7 +190,6 @@ export function PlayerQuestionPage() {
   const addTextAnswer = () => {
     if (isSubmissionClosed()) {
       setLocked(true);
-      setTimerRunning(false);
       return;
     }
 
@@ -251,13 +253,11 @@ export function PlayerQuestionPage() {
   const handleSelect = (choiceId: string) => {
     if (!playerPeer || !currentQuestion || !participantId || isSubmissionClosed()) {
       setLocked(true);
-      setTimerRunning(false);
       return;
     }
 
     setSelectedId(choiceId);
     setLocked(true);
-    setTimerRunning(false);
     setHasAnsweredCurrentQuestion(true);
 
     if (currentQuestion.type === "mcq") {
@@ -283,7 +283,6 @@ export function PlayerQuestionPage() {
   const handleSubmitTextAnswers = () => {
     if (!playerPeer || !currentQuestion || !participantId || isSubmissionClosed()) {
       setLocked(true);
-      setTimerRunning(false);
       return;
     }
 
@@ -303,7 +302,6 @@ export function PlayerQuestionPage() {
     if (allAnswers.length === 0) return;
 
     setLocked(true);
-    setTimerRunning(false);
     setHasAnsweredCurrentQuestion(true);
 
     playerPeer.send({
