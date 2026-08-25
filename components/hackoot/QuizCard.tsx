@@ -6,6 +6,7 @@ import { Pencil, Play, Trash2, Download } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { exportQuiz } from "@/utils/quizStorage";
 import { resolveQuizType } from "@/utils/teamBuilding";
+import { estimateQuizDuration, formatDurationFromSeconds } from "@/utils/quizDuration";
 
 interface QuizCardProps {
   quiz: Quiz;
@@ -20,6 +21,7 @@ export function QuizCard({ quiz, onEdit, onStart, onDelete }: QuizCardProps) {
   };
 
   const quizType = resolveQuizType(quiz.quizType);
+  const durationEstimate = estimateQuizDuration(quiz);
 
   return (
     <div className="glass-card p-5 flex flex-col gap-4 fade-in">
@@ -43,10 +45,10 @@ export function QuizCard({ quiz, onEdit, onStart, onDelete }: QuizCardProps) {
             {quiz.description}
           </p>
         )}
-        <div className="flex items-center gap-3 mt-3 text-xs text-[var(--text-secondary)]">
-          <span>{quiz.questions.length} questions</span>
-          <span>•</span>
-          <span>
+        <div className="mt-3 grid grid-cols-3 gap-2 text-xs text-[var(--text-secondary)]">
+          <span className="truncate">{quiz.questions.length} questions</span>
+          <span className="truncate">Est. {formatDurationFromSeconds(durationEstimate.totalSeconds)}</span>
+          <span className="truncate text-right">
             {formatDistanceToNow(new Date(quiz.createdAt), { addSuffix: true })}
           </span>
         </div>

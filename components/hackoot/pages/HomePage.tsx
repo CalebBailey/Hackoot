@@ -38,7 +38,7 @@ export function HomePage() {
   };
 
   return (
-    <div className="container mx-auto px-4 py-6 max-w-5xl">
+    <div className="container mx-auto px-4 py-6 max-w-7xl">
       {/* Header */}
       <div className="text-center mb-6">
         <img src="/logo.png" alt="Hackoot Logo" className="mx-auto mb-3 w-auto h-28 sm:h-36 md:h-44" />
@@ -101,7 +101,7 @@ export function HomePage() {
           </div>
         </div>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 2xl:grid-cols-3 gap-4">
           {quizzes.map((quiz) => (
             <QuizCard
               key={quiz.quizId}
