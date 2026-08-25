@@ -1,7 +1,7 @@
 import { QuizType, TeamBuildingQuizSettings } from "@/types";
 
 export const DEFAULT_TEAM_BUILDING_SETTINGS: TeamBuildingQuizSettings = {
-  enableFuzzyGrouping: false,
+  enableFuzzyGrouping: true,
   enableDiscussionVoting: true,
   saveOutputsForReuse: false,
   maxAnswersPerPlayer: 3,

@@ -72,9 +72,15 @@ function buildRawAnswers(question: Question, answers: AnswerRecord[]) {
   return raw;
 }
 
-function buildTeamResults(question: Question, answers: AnswerRecord[]): TeamResultSnapshot {
+function buildTeamResults(
+  question: Question,
+  answers: AnswerRecord[],
+  enableFuzzyGrouping: boolean
+): TeamResultSnapshot {
   const rawAnswers = buildRawAnswers(question, answers);
-  const groupedAnswers = groupAnswersByNormalisedText(rawAnswers).clusters;
+  const groupedAnswers = groupAnswersByNormalisedText(rawAnswers, {
+    enableFuzzyGrouping,
+  }).clusters;
 
   return {
     groupedAnswers,
@@ -140,6 +146,7 @@ export function HostResultsPage({ quizId }: HostResultsPageProps) {
   const isLastQuestion = quiz ? currentQuestionIndex >= quiz.questions.length - 1 : true;
   const quizType = resolveQuizType(quiz?.quizType);
   const isTeamBuilding = quizType === "team-building";
+  const isFuzzyGroupingEnabled = quiz?.teamBuildingSettings?.enableFuzzyGrouping ?? true;
   const isDiscussionVotingEnabled = quiz?.teamBuildingSettings?.enableDiscussionVoting ?? true;
   const selectableChoices = currentQuestion ? getSelectableChoices(currentQuestion) : [];
   const participantDirectory = session?.participants.map((participant) => ({
@@ -155,7 +162,11 @@ export function HostResultsPage({ quizId }: HostResultsPageProps) {
     if (isTeamBuilding) {
       if (currentQuestion.type === "discussion") {
         if (!isDiscussionVotingEnabled) {
-          const resultSnapshot = buildTeamResults(currentQuestion, session.answers);
+          const resultSnapshot = buildTeamResults(
+            currentQuestion,
+            session.answers,
+            isFuzzyGroupingEnabled
+          );
           setTeamResults(resultSnapshot);
           setTeamVoteContext(null);
           setTeamResultsSnapshot({
@@ -208,7 +219,11 @@ export function HostResultsPage({ quizId }: HostResultsPageProps) {
         return;
       }
 
-      const resultSnapshot = buildTeamResults(currentQuestion, session.answers);
+      const resultSnapshot = buildTeamResults(
+        currentQuestion,
+        session.answers,
+        isFuzzyGroupingEnabled
+      );
       setTeamResults(resultSnapshot);
       setTeamResultsSnapshot({
         questionId: currentQuestion.id,
@@ -296,7 +311,11 @@ export function HostResultsPage({ quizId }: HostResultsPageProps) {
       }));
 
     const discussionQueue = buildDiscussionQueue(discussionCandidates, votes);
-    const resultSnapshot = buildTeamResults(currentQuestion, session.answers);
+    const resultSnapshot = buildTeamResults(
+      currentQuestion,
+      session.answers,
+      isFuzzyGroupingEnabled
+    );
 
     setTeamResults(resultSnapshot);
     setTeamResultsSnapshot({

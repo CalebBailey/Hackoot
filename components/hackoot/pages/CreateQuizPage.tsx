@@ -236,6 +236,23 @@ export function CreateQuizPage() {
             </p>
 
             <label
+              htmlFor="create-team-setting-fuzzy-grouping"
+              className="text-sm text-[var(--text-secondary)] flex items-center justify-between gap-3 rounded-lg border border-white/10 bg-white/[0.02] px-3 py-2.5 cursor-pointer"
+            >
+              Group similar answers
+              <Checkbox
+                id="create-team-setting-fuzzy-grouping"
+                checked={teamBuildingSettings.enableFuzzyGrouping}
+                onCheckedChange={(checked) =>
+                  setTeamBuildingSettings((current) => ({
+                    ...current,
+                    enableFuzzyGrouping: checked === true,
+                  }))
+                }
+                className="size-5 border-white/30 data-[state=checked]:bg-[var(--color-action)] data-[state=checked]:border-[var(--color-action)] data-[state=checked]:text-white"
+              />
+            </label>
+            <label
               htmlFor="create-team-setting-discussion-voting"
               className="text-sm text-[var(--text-secondary)] flex items-center justify-between gap-3 rounded-lg border border-white/10 bg-white/[0.02] px-3 py-2.5 cursor-pointer"
             >

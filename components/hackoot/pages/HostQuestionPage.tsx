@@ -217,7 +217,7 @@ export function HostQuestionPage({ quizId }: HostQuestionPageProps) {
   return (
     <div
       className={`flex flex-col px-4 py-3 max-w-3xl mx-auto ${
-        isTeamBuilding ? "min-h-screen overflow-y-auto" : "h-screen overflow-hidden"
+        isTeamBuilding ? "min-h-dvh overflow-y-auto" : "h-dvh overflow-y-auto"
       }`}
     >
       {isDoublePoints && <div className="double-points-vignette" aria-hidden="true" />}
@@ -270,7 +270,7 @@ export function HostQuestionPage({ quizId }: HostQuestionPageProps) {
       {/* Answer Grid */}
       <div className="flex justify-center mb-3">
         {selectableChoices.length > 0 ? (
-          <AnswerGrid choices={selectableChoices} locked={true} />
+          <AnswerGrid choices={selectableChoices} locked={true} compact />
         ) : (
           <div className="w-full glass-card p-4 text-center text-[var(--text-secondary)] text-sm">
             {isTeamBuilding && currentQuestion.type === "discussion"

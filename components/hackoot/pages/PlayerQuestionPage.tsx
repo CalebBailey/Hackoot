@@ -11,6 +11,7 @@ import { PeerMessage } from "@/types";
 import { DEFAULT_QUESTION_TIME_LIMIT } from "@/utils/scoring";
 import { Plus, Send, Zap } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { getSelectableChoices, normaliseAnswer, resolveQuizType } from "@/utils/teamBuilding";
 
 const STANDARD_OPTION_BASE_COLOURS = [
@@ -200,6 +201,34 @@ export function PlayerQuestionPage() {
     const trimmed = textInput.trim();
     if (!trimmed) return;
 
+    const duplicateKey = normaliseAnswer(trimmed) || trimmed.toLowerCase();
+    const stagedKeys = new Set(
+      textAnswers
+        .map((answer) => {
+          const answerKey = normaliseAnswer(answer) || answer.toLowerCase();
+          return answerKey;
+        })
+        .filter((answerKey) => answerKey.length > 0)
+    );
+
+    if (currentQuestion?.type === "select-or-text") {
+      const selectedOptionTexts = getSelectableChoices(currentQuestion)
+        .filter((choice) => selectedOptionIds.includes(choice.id))
+        .map((choice) => choice.text.trim())
+        .filter(Boolean);
+
+      for (const optionText of selectedOptionTexts) {
+        const optionKey = normaliseAnswer(optionText) || optionText.toLowerCase();
+        if (optionKey) {
+          stagedKeys.add(optionKey);
+        }
+      }
+    }
+
+    if (duplicateKey.length > 0 && stagedKeys.has(duplicateKey)) {
+      return;
+    }
+
     const maxAnswers =
       currentQuestion?.type === "free-text" ||
       currentQuestion?.type === "discussion" ||
@@ -286,6 +315,16 @@ export function PlayerQuestionPage() {
       return;
     }
 
+    const allowTimedOutSubmit =
+      isTeamBuilding &&
+      (currentQuestion.type === "free-text" ||
+        currentQuestion.type === "discussion" ||
+        currentQuestion.type === "select-or-text") &&
+      locked &&
+      !hasAnsweredCurrentQuestion;
+
+    if (locked && !allowTimedOutSubmit) return;
+
     const selectableChoices = getSelectableChoices(currentQuestion);
     const selectedOptionTexts = selectableChoices
       .filter((choice) => selectedOptionIds.includes(choice.id))
@@ -347,8 +386,47 @@ export function PlayerQuestionPage() {
   const canUseCustomAnswer =
     currentQuestion.type !== "select-or-text" || (currentQuestion.allowCustomAnswer ?? true);
 
+  const selectedOptionTextsForDuplicateCheck =
+    currentQuestion.type === "select-or-text"
+      ? selectableChoices
+          .filter((choice) => selectedOptionIds.includes(choice.id))
+          .map((choice) => choice.text.trim())
+          .filter(Boolean)
+      : [];
+
+  const stagedAnswerKeys = new Set(
+    [
+      ...textAnswers,
+      ...selectedOptionTextsForDuplicateCheck,
+    ]
+      .map((answer) => {
+        const key = normaliseAnswer(answer) || answer.toLowerCase();
+        return key;
+      })
+      .filter((key) => key.length > 0)
+  );
+
+  const draftInputKey = (() => {
+    const trimmed = textInput.trim();
+    if (!trimmed) {
+      return "";
+    }
+
+    return normaliseAnswer(trimmed) || trimmed.toLowerCase();
+  })();
+
+  const duplicateDraftAnswer = draftInputKey.length > 0 && stagedAnswerKeys.has(draftInputKey);
+  const duplicateDraftMessage = "Duplicate entry - you have already staged this response.";
+  const canSubmitStagedAfterTimeout =
+    isTeamBuilding &&
+    isTextSubmissionQuestion &&
+    !hasAnsweredCurrentQuestion &&
+    locked &&
+    totalDraftAnswers > 0;
+  const canRemoveStagedAnswers = !hasAnsweredCurrentQuestion && !locked;
+
   return (
-    <div className="h-screen overflow-y-auto flex flex-col px-4 py-4 max-w-2xl mx-auto">
+    <div className="h-dvh overflow-y-auto flex flex-col px-4 py-4 max-w-2xl mx-auto">
       {isDoublePoints && <div className="double-points-vignette" aria-hidden="true" />}
 
       {/* Points info / double points badge */}
@@ -406,6 +484,7 @@ export function PlayerQuestionPage() {
             selectedId={selectedId || undefined}
             locked={locked}
             showChoiceText={!isTeamBuilding}
+            compact
           />
         ) : (
           <div className="w-full max-w-xl space-y-4">
@@ -509,26 +588,44 @@ export function PlayerQuestionPage() {
                     )}
                   </div>
 
-                  <Button
-                    type="button"
-                    variant="primary"
-                    size="md"
-                    fullWidth
-                    onClick={addTextAnswer}
-                    disabled={locked || remainingAnswers === 0 || !textInput.trim()}
-                    className="mt-3 bg-[#6D8CF7] hover:bg-[#5C7DEB]"
-                    aria-label="Add response to staging"
-                  >
-                    <Plus className="w-5 h-5 mr-2" />
-                    Add response
-                  </Button>
+                  <Tooltip open={!locked && duplicateDraftAnswer}>
+                    <TooltipTrigger asChild>
+                      <div className="mt-3">
+                        <Button
+                          type="button"
+                          variant="primary"
+                          size="md"
+                          fullWidth
+                          onClick={addTextAnswer}
+                          disabled={locked || remainingAnswers === 0 || !textInput.trim() || duplicateDraftAnswer}
+                          className="bg-[#6D8CF7] hover:bg-[#5C7DEB]"
+                          aria-label="Add response to staging"
+                        >
+                          <Plus className="w-5 h-5 mr-2" />
+                          Add response
+                        </Button>
+                      </div>
+                    </TooltipTrigger>
+                    <TooltipContent
+                      side="bottom"
+                      align="center"
+                      sideOffset={8}
+                      collisionPadding={12}
+                      className="max-w-[min(22rem,calc(100vw-2rem))] text-center"
+                    >
+                      {duplicateDraftMessage}
+                    </TooltipContent>
+                  </Tooltip>
+
                 </>
               )}
 
               {canUseCustomAnswer && (
                 <div className="mt-3 rounded-lg border border-white/10 bg-black/20 p-3">
                   <div className="flex items-center justify-between gap-3 mb-2">
-                    <p className="text-sm font-medium text-[var(--text-primary)]">Staged responses (not sent yet)</p>
+                    <p className="text-sm font-medium text-[var(--text-primary)]">
+                      {hasAnsweredCurrentQuestion ? "Sent responses" : "Staged responses (not sent yet)"}
+                    </p>
                     <span className="text-xs px-2 py-1 rounded-full border border-white/20 text-[var(--text-secondary)]">
                       {totalDraftAnswers}/{maxAnswers}
                     </span>
@@ -540,29 +637,55 @@ export function PlayerQuestionPage() {
                     </p>
                   ) : (
                     <div className="flex flex-wrap gap-2">
-                      {stagedSelectOrTextOptions.map((option) => (
-                        <button
-                          key={`staged-option-${option.id}`}
-                          type="button"
-                          onClick={() => toggleSelectOrTextOption(option.id)}
-                          disabled={locked}
-                          className="px-2.5 py-1 rounded-full text-sm bg-white/10 border border-white/20 text-[var(--text-primary)] hover:bg-white/15"
-                        >
-                          Option {option.label}
-                        </button>
-                      ))}
+                      {stagedSelectOrTextOptions.map((option) => {
+                        if (canRemoveStagedAnswers) {
+                          return (
+                            <button
+                              key={`staged-option-${option.id}`}
+                              type="button"
+                              onClick={() => toggleSelectOrTextOption(option.id)}
+                              className="px-2.5 py-1 rounded-full text-sm bg-white/10 border border-white/20 text-[var(--text-primary)] hover:bg-white/15"
+                              aria-label={`Remove staged option ${option.label}`}
+                            >
+                              x Option {option.label}
+                            </button>
+                          );
+                        }
 
-                      {textAnswers.map((answer, index) => (
-                        <button
-                          key={`${answer}-${index}`}
-                          type="button"
-                          onClick={() => removeTextAnswer(index)}
-                          disabled={locked}
-                          className="px-2.5 py-1 rounded-full text-sm bg-[var(--color-action)]/15 border border-[var(--color-action)]/30 text-[var(--text-primary)] hover:bg-[var(--color-action)]/25"
-                        >
-                          {answer}
-                        </button>
-                      ))}
+                        return (
+                          <span
+                            key={`sent-option-${option.id}`}
+                            className="px-2.5 py-1 rounded-full text-sm bg-white/10 border border-white/20 text-[var(--text-primary)]"
+                          >
+                            Option {option.label}
+                          </span>
+                        );
+                      })}
+
+                      {textAnswers.map((answer, index) => {
+                        if (canRemoveStagedAnswers) {
+                          return (
+                            <button
+                              key={`${answer}-${index}`}
+                              type="button"
+                              onClick={() => removeTextAnswer(index)}
+                              className="px-2.5 py-1 rounded-full text-sm bg-[var(--color-action)]/15 border border-[var(--color-action)]/30 text-[var(--text-primary)] hover:bg-[var(--color-action)]/25"
+                              aria-label={`Remove staged response ${answer}`}
+                            >
+                              x {answer}
+                            </button>
+                          );
+                        }
+
+                        return (
+                          <span
+                            key={`${answer}-${index}`}
+                            className="px-2.5 py-1 rounded-full text-sm bg-[var(--color-action)]/15 border border-[var(--color-action)]/30 text-[var(--text-primary)]"
+                          >
+                            {answer}
+                          </span>
+                        );
+                      })}
                     </div>
                   )}
                 </div>
@@ -574,7 +697,7 @@ export function PlayerQuestionPage() {
                 size="lg"
                 fullWidth
                 onClick={handleSubmitTextAnswers}
-                disabled={locked || totalDraftAnswers === 0}
+                disabled={(locked && !canSubmitStagedAfterTimeout) || totalDraftAnswers === 0}
                 className={canUseCustomAnswer ? "mt-4" : ""}
               >
                 <Send className="w-4 h-4 mr-2" />

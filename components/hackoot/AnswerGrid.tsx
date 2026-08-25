@@ -11,6 +11,7 @@ interface AnswerGridProps {
   locked?: boolean;
   revealedCorrectIds?: string[];
   showChoiceText?: boolean;
+  compact?: boolean;
 }
 
 const COLORS = [
@@ -35,13 +36,17 @@ export function AnswerGrid({
   locked,
   revealedCorrectIds,
   showChoiceText = true,
+  compact = false,
 }: AnswerGridProps) {
   const isRevealed = revealedCorrectIds && revealedCorrectIds.length > 0;
   const isLetterOnly = !showChoiceText;
 
   return (
     <div 
-      className="grid grid-cols-2 gap-3 w-full max-w-2xl"
+      className={cn(
+        "grid grid-cols-2 w-full max-w-2xl",
+        compact ? "gap-2.5" : "gap-3"
+      )}
       role="group"
       aria-label="Answer choices"
     >
@@ -59,8 +64,12 @@ export function AnswerGrid({
             className={cn(
               "relative rounded-xl text-white font-semibold transition-all duration-200",
               showChoiceText
-                ? "p-4 sm:p-6 text-lg sm:text-xl text-left"
-                : "p-6 sm:p-8 min-h-[124px] sm:min-h-[140px] flex items-center justify-center",
+                ? compact
+                  ? "p-3 sm:p-4 text-base sm:text-lg text-left"
+                  : "p-4 sm:p-6 text-lg sm:text-xl text-left"
+                : compact
+                  ? "p-4 sm:p-5 min-h-[102px] sm:min-h-[116px] flex items-center justify-center"
+                  : "p-6 sm:p-8 min-h-[124px] sm:min-h-[140px] flex items-center justify-center",
               color.bg,
               !locked && "hover:scale-[1.02] active:scale-[0.98]",
               locked && isSelected && "scale-[0.97]",
@@ -76,13 +85,15 @@ export function AnswerGrid({
                 <span className="absolute top-3 left-3 inline-flex h-8 w-8 items-center justify-center rounded-md border border-white/35 bg-black/30 text-base font-black leading-none shadow-sm">
                   {choiceLabel}
                 </span>
-                <span className="block mt-8">{choice.text}</span>
+                <span className={cn("block", compact ? "mt-7" : "mt-8")}>{choice.text}</span>
               </>
             ) : (
               <span
                 className={cn(
                   "font-black leading-none tracking-tight text-white drop-shadow-[0_2px_6px_rgba(0,0,0,0.35)]",
-                  isLetterOnly ? "text-5xl sm:text-6xl" : "text-4xl sm:text-5xl"
+                  compact
+                    ? isLetterOnly ? "text-4xl sm:text-5xl" : "text-3xl sm:text-4xl"
+                    : isLetterOnly ? "text-5xl sm:text-6xl" : "text-4xl sm:text-5xl"
                 )}
               >
                 {choiceLabel}

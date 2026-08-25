@@ -108,6 +108,7 @@ export type TeamResultSessionState = "team-results" | "team-discussion";
 export interface TeamAnswerCluster {
   id: string;
   canonicalText: string;
+  answerTexts?: string[];
   answerIds: string[];
   participantIds: string[];
   count: number;
