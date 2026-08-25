@@ -7,6 +7,7 @@ const SINGLE_SHARED_TOKEN_THRESHOLD = 0.78;
 const HIGH_CONFIDENCE_STRING_MATCH_THRESHOLD = 0.9;
 const SINGLE_TOKEN_STRING_MATCH_THRESHOLD = 0.94;
 const MIN_COMPACT_KEY_LENGTH_FOR_FUZZY = 4;
+const ALPHA_TOKEN_PATTERN = /^\p{L}+$/u;
 const TOKEN_STOP_WORDS = new Set([
   "a",
   "an",
@@ -61,6 +62,10 @@ interface ClusterBucket {
 }
 
 function stemToken(token: string): string {
+  if (!ALPHA_TOKEN_PATTERN.test(token)) {
+    return token;
+  }
+
   if (token.length <= 3) {
     return token;
   }
@@ -114,6 +119,9 @@ function removeDiacritics(value: string): string {
 function sanitiseText(value: string): string {
   return removeDiacritics(value)
     .toLowerCase()
+    .replace(/\bc\s*\+\s*\+/g, "c++")
+    .replace(/\bc\s*#/g, "c#")
+    .replace(/\bf\s*#/g, "f#")
     .replace(/&/g, " and ")
     .replace(/[’']/g, "")
     .replace(/[_/\\-]+/g, " ");
@@ -130,7 +138,7 @@ function expandNormalisedToken(token: string, options: NormaliseOptions): string
 
 function buildTokenSet(text: string, options: NormaliseOptions): Set<string> {
   const tokens = sanitiseText(text)
-    .replace(/[^\p{L}\p{N}\s'-]+/gu, " ")
+    .replace(/[^\p{L}\p{N}\s#+.\-]+/gu, " ")
     .split(/\s+/)
     .flatMap((token) => expandNormalisedToken(token, options))
     .map((token) => stemToken(token))
@@ -140,7 +148,7 @@ function buildTokenSet(text: string, options: NormaliseOptions): Set<string> {
 }
 
 function buildCompactKey(text: string): string {
-  return sanitiseText(text).replace(/[^\p{L}\p{N}]+/gu, "");
+  return sanitiseText(text).replace(/[^\p{L}\p{N}#+.]+/gu, "");
 }
 
 function scoreStringSimilarity(left: string, right: string): number {
