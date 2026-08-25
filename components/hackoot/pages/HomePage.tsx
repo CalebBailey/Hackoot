@@ -1,18 +1,24 @@
 "use client";
 
-import { useRef } from "react";
+import { useRef, useState } from "react";
 import { useQuizStore } from "@/store/quizStore";
 import { Button } from "../Button";
 import { QuizCard } from "../QuizCard";
 import { navigate } from "../HackootApp";
-import { Plus, Upload, Gamepad2 } from "lucide-react";
+import { Plus, Upload, Gamepad2, FileText } from "lucide-react";
 import { Quiz } from "@/types";
+import {
+  exportSessionResultsPdf,
+  normaliseSessionExportData,
+} from "@/utils/quizStorage";
 
 export function HomePage() {
   const quizzes = useQuizStore((state) => state.quizzes);
   const deleteQuiz = useQuizStore((state) => state.deleteQuiz);
   const importQuiz = useQuizStore((state) => state.importQuiz);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const resultsInputRef = useRef<HTMLInputElement>(null);
+  const [importingResultsPdf, setImportingResultsPdf] = useState(false);
 
   const handleImport = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -37,8 +43,33 @@ export function HomePage() {
     }
   };
 
+  const handleImportResultsToPdf = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setImportingResultsPdf(true);
+    try {
+      const raw = JSON.parse(await file.text()) as unknown;
+      const normalised = normaliseSessionExportData(raw);
+
+      if (!normalised) {
+        alert("Invalid results file");
+        return;
+      }
+
+      const fileTitle = file.name.replace(/\.[^.]+$/, "").trim();
+      const reportTitle = normalised.quizTitle?.trim() || fileTitle || "hackoot-results";
+      await exportSessionResultsPdf(normalised, reportTitle);
+    } catch {
+      alert("Invalid results file");
+    } finally {
+      setImportingResultsPdf(false);
+      e.target.value = "";
+    }
+  };
+
   return (
-    <div className="container mx-auto px-4 py-6 max-w-5xl">
+    <div className="container mx-auto px-4 py-6 max-w-7xl">
       {/* Header */}
       <div className="text-center mb-6">
         <img src="/logo.png" alt="Hackoot Logo" className="mx-auto mb-3 w-auto h-28 sm:h-36 md:h-44" />
@@ -75,6 +106,22 @@ export function HomePage() {
         <Button
           variant="secondary"
           size="lg"
+          onClick={() => resultsInputRef.current?.click()}
+          disabled={importingResultsPdf}
+        >
+          <FileText className="w-5 h-5 mr-2" />
+          {importingResultsPdf ? "Generating PDF..." : "Import Results to PDF"}
+        </Button>
+        <input
+          ref={resultsInputRef}
+          type="file"
+          accept=".json,application/json"
+          onChange={handleImportResultsToPdf}
+          className="hidden"
+        />
+        <Button
+          variant="secondary"
+          size="lg"
           onClick={() => navigate("/join")}
         >
           <Gamepad2 className="w-5 h-5 mr-2" />
@@ -101,7 +148,7 @@ export function HomePage() {
           </div>
         </div>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 2xl:grid-cols-3 gap-4">
           {quizzes.map((quiz) => (
             <QuizCard
               key={quiz.quizId}

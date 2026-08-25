@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { Participant, TeamAnswerCluster } from "@/types";
+import { useIsMobile } from "@/hooks/use-mobile";
 import {
   buildInterestMatchGraph,
   InterestMatchNode,
@@ -24,10 +25,51 @@ function truncateLabel(value: string, maxLength: number): string {
   return `${value.slice(0, maxLength - 1)}...`;
 }
 
-function toNodePositions(matches: ParticipantMatch[]) {
-  const centreX = 320;
-  const centreY = 170;
-  const radius = matches.length <= 2 ? 130 : 155;
+interface GraphLayout {
+  width: number;
+  height: number;
+  centreX: number;
+  centreY: number;
+  radius: number;
+  focusRadius: number;
+  outerNodeRadius: number;
+  scoreBadgeRadius: number;
+  focusLabelMaxLength: number;
+  nodeLabelMaxLength: number;
+}
+
+function createGraphLayout(matchCount: number, isMobile: boolean): GraphLayout {
+  if (isMobile) {
+    return {
+      width: 380,
+      height: 420,
+      centreX: 190,
+      centreY: 190,
+      radius: matchCount <= 2 ? 118 : 134,
+      focusRadius: 44,
+      outerNodeRadius: 26,
+      scoreBadgeRadius: 11,
+      focusLabelMaxLength: 13,
+      nodeLabelMaxLength: 10,
+    };
+  }
+
+  return {
+    width: 640,
+    height: 360,
+    centreX: 320,
+    centreY: 170,
+    radius: matchCount <= 2 ? 130 : 155,
+    focusRadius: 38,
+    outerNodeRadius: 28,
+    scoreBadgeRadius: 12,
+    focusLabelMaxLength: 16,
+    nodeLabelMaxLength: 14,
+  };
+}
+
+function toNodePositions(matches: ParticipantMatch[], layout: GraphLayout) {
+  const { centreX, centreY, radius } = layout;
 
   return matches.map((match, index) => {
     const angle = (-Math.PI / 2) + (2 * Math.PI * index) / Math.max(1, matches.length);
@@ -48,6 +90,8 @@ export function InterestMatchGraph({
   title = "Compatibility graph",
   maxVisibleMatches = 6,
 }: InterestMatchGraphProps) {
+  const isMobile = useIsMobile();
+
   const participantById = useMemo(
     () => new Map(participants.map((participant) => [participant.participantId, participant])),
     [participants]
@@ -86,7 +130,14 @@ export function InterestMatchGraph({
 
   const maxScore = Math.max(1, graph.maxScore);
   const hasConnections = visibleMatches.length > 0;
-  const positions = toNodePositions(visibleMatches);
+  const layout = useMemo(
+    () => createGraphLayout(visibleMatches.length, isMobile),
+    [visibleMatches.length, isMobile]
+  );
+  const positions = useMemo(
+    () => toNodePositions(visibleMatches, layout),
+    [visibleMatches, layout]
+  );
   const focusLabel = currentParticipantId && currentParticipantId === focusNode?.participantId ? "You" : "Focus";
 
   return (
@@ -125,18 +176,23 @@ export function InterestMatchGraph({
         </p>
       ) : (
         <>
-          <div className="rounded-xl border border-white/10 bg-white/[0.02] p-3 overflow-x-auto">
-            <svg viewBox="0 0 640 360" className="w-full min-w-[540px] h-auto" role="img" aria-label="Compatibility graph">
+          <div className="rounded-xl border border-white/10 bg-white/[0.02] p-3 overflow-hidden">
+            <svg
+              viewBox={`0 0 ${layout.width} ${layout.height}`}
+              className="w-full h-auto"
+              role="img"
+              aria-label="Compatibility graph"
+            >
               {positions.map(({ match, x, y }) => {
                 const strokeWidth = 1.5 + (match.score / maxScore) * 4;
-                const midX = (320 + x) / 2;
-                const midY = (170 + y) / 2;
+                const midX = (layout.centreX + x) / 2;
+                const midY = (layout.centreY + y) / 2;
 
                 return (
                   <g key={match.participantId}>
                     <line
-                      x1={320}
-                      y1={170}
+                      x1={layout.centreX}
+                      y1={layout.centreY}
                       x2={x}
                       y2={y}
                       stroke="var(--color-action)"
@@ -144,7 +200,13 @@ export function InterestMatchGraph({
                       strokeWidth={strokeWidth}
                       strokeLinecap="round"
                     />
-                    <circle cx={midX} cy={midY} r={12} fill="rgba(15, 23, 42, 0.95)" stroke="rgba(255, 255, 255, 0.2)" />
+                    <circle
+                      cx={midX}
+                      cy={midY}
+                      r={layout.scoreBadgeRadius}
+                      fill="rgba(15, 23, 42, 0.95)"
+                      stroke="rgba(255, 255, 255, 0.2)"
+                    />
                     <text
                       x={midX}
                       y={midY + 4}
@@ -158,24 +220,24 @@ export function InterestMatchGraph({
               })}
 
               <circle
-                cx={320}
-                cy={170}
-                r={38}
+                cx={layout.centreX}
+                cy={layout.centreY}
+                r={layout.focusRadius}
                 fill="var(--color-action)"
                 fillOpacity={0.22}
                 stroke="var(--color-action)"
               />
               <text
-                x={320}
-                y={164}
+                x={layout.centreX}
+                y={layout.centreY - 6}
                 textAnchor="middle"
                 className="fill-[var(--text-primary)] text-sm font-semibold"
               >
-                {truncateLabel(focusNode.name, 16)}
+                {truncateLabel(focusNode.name, layout.focusLabelMaxLength)}
               </text>
               <text
-                x={320}
-                y={182}
+                x={layout.centreX}
+                y={layout.centreY + 12}
                 textAnchor="middle"
                 className="fill-[var(--text-secondary)] text-[11px]"
               >
@@ -187,14 +249,20 @@ export function InterestMatchGraph({
 
                 return (
                   <g key={`${match.participantId}-node`}>
-                    <circle cx={x} cy={y} r={28} fill="rgba(255, 255, 255, 0.06)" stroke="rgba(255, 255, 255, 0.2)" />
+                    <circle
+                      cx={x}
+                      cy={y}
+                      r={layout.outerNodeRadius}
+                      fill="rgba(255, 255, 255, 0.06)"
+                      stroke="rgba(255, 255, 255, 0.2)"
+                    />
                     <text
                       x={x}
                       y={y + 4}
                       textAnchor="middle"
                       className="fill-[var(--text-primary)] text-[11px] font-medium"
                     >
-                      {truncateLabel(name, 14)}
+                      {truncateLabel(name, layout.nodeLabelMaxLength)}
                     </text>
                   </g>
                 );
