@@ -78,8 +78,8 @@ export function QuizCard({ quiz, onEdit, onStart, onDelete }: QuizCardProps) {
         <button
           onClick={handleExport}
           className="p-2 rounded-lg hover:bg-white/10 transition-colors text-[var(--text-secondary)]"
-          aria-label={`Export ${quiz.title} as JSON`}
-          title="Export as JSON"
+          aria-label={`Export ${quiz.title} as import-compatible JSON`}
+          title="Export import-compatible JSON"
         >
           <Download className="w-4 h-4" />
         </button>

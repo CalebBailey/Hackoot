@@ -381,7 +381,7 @@ export function EditQuizPage({ quizId }: EditQuizPageProps) {
         </h1>
         <Button variant="ghost" onClick={handleExport}>
           <Download className="w-5 h-5 mr-2" />
-          Export
+          Export JSON (Import)
         </Button>
       </div>
 

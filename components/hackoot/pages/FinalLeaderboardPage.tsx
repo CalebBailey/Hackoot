@@ -2,10 +2,15 @@
 
 import { useEffect, useState } from "react";
 import { useSessionStore } from "@/store/sessionStore";
+import { useQuizStore } from "@/store/quizStore";
 import { Button } from "../Button";
 import { navigate } from "../HackootApp";
-import { Trophy, Download, Home, Medal } from "lucide-react";
-import { exportSessionResults } from "@/utils/quizStorage";
+import { Trophy, Download, Home, Medal, FileText } from "lucide-react";
+import {
+  exportSessionResults,
+  exportSessionResultsPdf,
+  SessionExportData,
+} from "@/utils/quizStorage";
 import {
   clearPlayerResumeTarget,
   clearPlayerSession,
@@ -31,6 +36,7 @@ export function FinalLeaderboardPage() {
   const setIsHost = useSessionStore((state) => state.setIsHost);
   const initSession = useSessionStore((state) => state.initSession);
   const reset = useSessionStore((state) => state.reset);
+  const getQuizById = useQuizStore((state) => state.getQuizById);
 
   const [thirdVisible, setThirdVisible] = useState(false);
   const [secondVisible, setSecondVisible] = useState(false);
@@ -40,9 +46,13 @@ export function FinalLeaderboardPage() {
   const [firstCardVisible, setFirstCardVisible] = useState(false);
   const [isRejoiningSession, setIsRejoiningSession] = useState(false);
   const [rejoinError, setRejoinError] = useState<string | null>(null);
+  const [exportingPdf, setExportingPdf] = useState(false);
 
   const leaderboard = getLeaderboard();
   const isTeamBuilding = resolveQuizType(session?.quizType) === "team-building";
+  const quizTitle = session
+    ? getQuizById(session.quizId)?.title ?? session.quizId ?? "hackoot-results"
+    : "hackoot-results";
 
   useEffect(() => {
     const timers: ReturnType<typeof setTimeout>[] = [];
@@ -110,23 +120,47 @@ export function FinalLeaderboardPage() {
     };
   }, [initSession, isHost, session, setIsHost, setParticipant]);
 
-  const handleDownload = () => {
-    if (!session) return;
-    exportSessionResults(
-      {
-        sessionId: session.sessionId,
-        roomCode: session.roomCode,
-        quizType: resolveQuizType(session.quizType),
-        participants: session.participants,
-        answers: session.answers,
-        leaderboard,
-        teamClusters: session.teamClusters,
-        teamDiscussionQueue: session.teamDiscussionQueue,
-        teamQuestionPrompts: session.teamQuestionPrompts,
-        endedAt: new Date().toISOString(),
-      },
-      session.quizId || "hackoot-results"
-    );
+  const buildSessionExportPayload = (): SessionExportData | null => {
+    if (!session) return null;
+
+    return {
+      sessionId: session.sessionId,
+      roomCode: session.roomCode,
+      quizType: resolveQuizType(session.quizType),
+      quizTitle,
+      participants: session.participants,
+      answers: session.answers,
+      leaderboard,
+      teamClusters: session.teamClusters,
+      teamDiscussionQueue: session.teamDiscussionQueue,
+      teamQuestionPrompts: session.teamQuestionPrompts,
+      endedAt: new Date().toISOString(),
+    };
+  };
+
+  const handleDownloadJson = () => {
+    const payload = buildSessionExportPayload();
+    if (!payload) {
+      return;
+    }
+
+    exportSessionResults(payload, quizTitle);
+  };
+
+  const handleDownloadPdf = async () => {
+    const payload = buildSessionExportPayload();
+    if (!payload || exportingPdf) {
+      return;
+    }
+
+    setExportingPdf(true);
+    try {
+      await exportSessionResultsPdf(payload, quizTitle);
+    } catch {
+      window.alert("Unable to generate the PDF report right now. Please try again.");
+    } finally {
+      setExportingPdf(false);
+    }
   };
 
   const handlePlayAgain = () => {
@@ -325,11 +359,20 @@ export function FinalLeaderboardPage() {
       {/* Actions */}
       <div className="flex flex-col sm:flex-row gap-3">
         {isHost && (
-          <Button variant="secondary" onClick={handleDownload} className="flex-1">
+          <Button variant="secondary" onClick={handleDownloadJson} className="flex-1">
             <Download className="w-5 h-5 mr-2" />
-            Download Results
+            Export JSON
           </Button>
         )}
+        <Button
+          variant="secondary"
+          onClick={handleDownloadPdf}
+          className="flex-1"
+          disabled={exportingPdf}
+        >
+          <FileText className="w-5 h-5 mr-2" />
+          {exportingPdf ? "Preparing PDF..." : "Export PDF Report"}
+        </Button>
         <Button variant="primary" onClick={handlePlayAgain} className="flex-1">
           <Home className="w-5 h-5 mr-2" />
           Play Again

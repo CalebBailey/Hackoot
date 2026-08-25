@@ -1,18 +1,24 @@
 "use client";
 
-import { useRef } from "react";
+import { useRef, useState } from "react";
 import { useQuizStore } from "@/store/quizStore";
 import { Button } from "../Button";
 import { QuizCard } from "../QuizCard";
 import { navigate } from "../HackootApp";
-import { Plus, Upload, Gamepad2 } from "lucide-react";
+import { Plus, Upload, Gamepad2, FileText } from "lucide-react";
 import { Quiz } from "@/types";
+import {
+  exportSessionResultsPdf,
+  normaliseSessionExportData,
+} from "@/utils/quizStorage";
 
 export function HomePage() {
   const quizzes = useQuizStore((state) => state.quizzes);
   const deleteQuiz = useQuizStore((state) => state.deleteQuiz);
   const importQuiz = useQuizStore((state) => state.importQuiz);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const resultsInputRef = useRef<HTMLInputElement>(null);
+  const [importingResultsPdf, setImportingResultsPdf] = useState(false);
 
   const handleImport = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -34,6 +40,31 @@ export function HomePage() {
   const handleDelete = (quizId: string, title: string) => {
     if (confirm(`Are you sure you want to delete "${title}"?`)) {
       deleteQuiz(quizId);
+    }
+  };
+
+  const handleImportResultsToPdf = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setImportingResultsPdf(true);
+    try {
+      const raw = JSON.parse(await file.text()) as unknown;
+      const normalised = normaliseSessionExportData(raw);
+
+      if (!normalised) {
+        alert("Invalid results file");
+        return;
+      }
+
+      const fileTitle = file.name.replace(/\.[^.]+$/, "").trim();
+      const reportTitle = normalised.quizTitle?.trim() || fileTitle || "hackoot-results";
+      await exportSessionResultsPdf(normalised, reportTitle);
+    } catch {
+      alert("Invalid results file");
+    } finally {
+      setImportingResultsPdf(false);
+      e.target.value = "";
     }
   };
 
@@ -70,6 +101,22 @@ export function HomePage() {
           type="file"
           accept=".json"
           onChange={handleImport}
+          className="hidden"
+        />
+        <Button
+          variant="secondary"
+          size="lg"
+          onClick={() => resultsInputRef.current?.click()}
+          disabled={importingResultsPdf}
+        >
+          <FileText className="w-5 h-5 mr-2" />
+          {importingResultsPdf ? "Generating PDF..." : "Import Results to PDF"}
+        </Button>
+        <input
+          ref={resultsInputRef}
+          type="file"
+          accept=".json,application/json"
+          onChange={handleImportResultsToPdf}
           className="hidden"
         />
         <Button
