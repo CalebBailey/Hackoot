@@ -439,7 +439,7 @@ export function EditQuizPage({ quizId }: EditQuizPageProps) {
             Estimated quiz time: {formatDurationFromSeconds(durationEstimate.totalSeconds)}
           </p>
           <p className="text-xs text-[var(--text-secondary)] mt-1">
-            Questions: {formatDurationFromSeconds(durationEstimate.questionTimeSeconds)} + extra discussion and transition buffer (3m per discussion question): {formatDurationFromSeconds(durationEstimate.extraTimeSeconds)}
+            Questions: {formatDurationFromSeconds(durationEstimate.questionTimeSeconds)} + extra host discussion and transition buffer (30s per question + 3m per discussion question): {formatDurationFromSeconds(durationEstimate.extraTimeSeconds)}
           </p>
         </div>
 

@@ -15,7 +15,7 @@ export interface QuizDurationEstimate {
 
 export const DEFAULT_QUIZ_DURATION_ESTIMATE_CONFIG: QuizDurationEstimateConfig = {
   sessionOverheadSeconds: 60,
-  perQuestionBufferSeconds: 10,
+  perQuestionBufferSeconds: 30,
   discussionExtraSeconds: 180,
 };
 
