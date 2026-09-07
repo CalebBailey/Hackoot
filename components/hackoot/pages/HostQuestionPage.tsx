@@ -32,6 +32,7 @@ export function HostQuestionPage({ quizId }: HostQuestionPageProps) {
   const [canReveal, setCanReveal] = useState(false);
   const [initialized, setInitialized] = useState(false);
   const questionStartTimeRef = useRef<number>(0);
+  const questionDeadlineRef = useRef<number>(0);
 
   const hostPeer = (window as any).__hackootHostPeer as HostPeer | undefined;
 
@@ -58,15 +59,18 @@ export function HostQuestionPage({ quizId }: HostQuestionPageProps) {
     }
 
     const introParticipantIds: string[] = [];
+    const questionStartedAt = Date.now();
+    const questionDeadline = questionStartedAt + questionDuration * 1000;
 
-    startQuestion(currentQuestionIndex, question, questionDuration, introParticipantIds);
-    questionStartTimeRef.current = Date.now();
+    startQuestion(currentQuestionIndex, question, questionDuration, introParticipantIds, questionStartedAt);
+    questionStartTimeRef.current = questionStartedAt;
+    questionDeadlineRef.current = questionDeadline;
     setTimerRunning(true);
     setCanReveal(false);
     setInitialized(true);
 
     // Broadcast question to players (without correct answers)
-    hostPeer.broadcastQuestion(question, currentQuestionIndex, quiz.questions.length, introParticipantIds);
+    hostPeer.broadcastQuestion(question, currentQuestionIndex, quiz.questions.length, introParticipantIds, questionStartedAt);
 
     // Handle incoming answers with Kahoot scoring
     hostPeer.onAnswerReceived = (participantId, questionId, choiceId, submittedAt) => {
@@ -76,6 +80,13 @@ export function HostQuestionPage({ quizId }: HostQuestionPageProps) {
 
       if (questionId !== question.id) return;
       if (question.type !== "mcq") return;
+      if (Date.now() > questionDeadlineRef.current) return;
+
+      const activeSession = useSessionStore.getState().session;
+      const alreadyAnswered = activeSession?.participants.some(
+        (participant) => participant.participantId === participantId && participant.answeredCurrentQuestion
+      );
+      if (alreadyAnswered) return;
 
       const responseTime = getResponseTime(questionStartTimeRef.current, submittedAt);
       const correct = question.correctChoiceIds.includes(choiceId);
@@ -89,6 +100,14 @@ export function HostQuestionPage({ quizId }: HostQuestionPageProps) {
         return;
       }
       if (questionId !== question.id) return;
+      if (Date.now() > questionDeadlineRef.current) return;
+
+      const activeSession = useSessionStore.getState().session;
+      const alreadyAnswered = activeSession?.participants.some(
+        (participant) => participant.participantId === participantId && participant.answeredCurrentQuestion
+      );
+      if (alreadyAnswered) return;
+
       recordTeamChoiceAnswer(participantId, questionId, choiceId, submittedAt);
     };
 
@@ -97,6 +116,14 @@ export function HostQuestionPage({ quizId }: HostQuestionPageProps) {
         return;
       }
       if (questionId !== question.id) return;
+      if (Date.now() > questionDeadlineRef.current) return;
+
+      const activeSession = useSessionStore.getState().session;
+      const alreadyAnswered = activeSession?.participants.some(
+        (participant) => participant.participantId === participantId && participant.answeredCurrentQuestion
+      );
+      if (alreadyAnswered) return;
+
       let cleanedAnswers = answers.map((answer) => answer.trim()).filter(Boolean);
 
       if (question.type === "select-or-text" && !(question.allowCustomAnswer ?? true)) {
@@ -205,6 +232,7 @@ export function HostQuestionPage({ quizId }: HostQuestionPageProps) {
             totalSeconds={questionDuration}
             onExpire={handleTimerExpire}
             running={timerRunning}
+            startedAt={session.questionStartedAt}
           />
         </div>
         <div className="flex items-center justify-end gap-2 text-[var(--text-secondary)]">

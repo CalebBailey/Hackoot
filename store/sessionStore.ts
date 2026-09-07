@@ -52,6 +52,12 @@ interface TeamResultsSnapshot {
   participants?: ParticipantDirectoryEntry[];
 }
 
+interface TeamGraphSnapshot {
+  teamClusters: Record<string, TeamAnswerCluster[]>;
+  teamDiscussionQueue: Record<string, DiscussionQueueItem[]>;
+  teamQuestionPrompts: Record<string, string>;
+}
+
 interface SessionStore {
   session: Session | null;
   peerError: string | null;
@@ -82,7 +88,9 @@ interface SessionStore {
     questionIndex: number,
     question: Question,
     questionDuration?: number,
-    discussionIntroParticipantIds?: string[]
+    discussionIntroParticipantIds?: string[],
+    questionStartedAt?: number,
+    hasAnsweredCurrentQuestion?: boolean
   ) => void;
   setCurrentQuestion: (question: Question | null) => void;
   setSessionState: (state: SessionState) => void;
@@ -99,6 +107,7 @@ interface SessionStore {
   recordTeamVotes: (participantId: string, questionId: string, answerIds: string[], submittedAt: number) => void;
   setTeamVoteContext: (ctx: TeamVoteContext | null) => void;
   setTeamResultsSnapshot: (snapshot: TeamResultsSnapshot | null, sessionState?: TeamResultSessionState) => void;
+  setTeamGraphSnapshot: (snapshot: TeamGraphSnapshot | null) => void;
   markParticipantAnswered: (participantId: string) => void;
   revealAnswer: () => void;
   updateLeaderboard: (leaderboard: LeaderboardEntry[], pointsAwarded: number) => void;
@@ -257,10 +266,21 @@ export const useSessionStore = create<SessionStore>((set, get) => ({
 
   setHasAnsweredCurrentQuestion: (answered) => set({ hasAnsweredCurrentQuestion: answered }),
 
-  startQuestion: (questionIndex, question, questionDuration, discussionIntroParticipantIds = []) => {
+  startQuestion: (
+    questionIndex,
+    question,
+    questionDuration,
+    discussionIntroParticipantIds = [],
+    questionStartedAt,
+    hasAnsweredCurrentQuestion = false
+  ) => {
     const quizType = get().session?.quizType ?? get().activeQuizType;
     const resolvedDuration = sanitizeQuestionTimeLimit(questionDuration ?? question.timeLimit);
     const deduplicatedIntroParticipantIds = Array.from(new Set(discussionIntroParticipantIds));
+    const resolvedQuestionStartedAt =
+      typeof questionStartedAt === "number" && Number.isFinite(questionStartedAt)
+        ? questionStartedAt
+        : Date.now();
     set((state) => {
       if (!state.session) return state;
       const nextState: SessionState = quizType === "team-building" ? "team-submission" : "question";
@@ -269,20 +289,23 @@ export const useSessionStore = create<SessionStore>((set, get) => ({
           ...state.session,
           state: nextState,
           currentQuestionIndex: questionIndex,
-          questionStartedAt: Date.now(),
+          questionStartedAt: resolvedQuestionStartedAt,
           teamQuestionPrompts: {
             ...(state.session.teamQuestionPrompts ?? {}),
             [question.id]: question.text,
           },
           participants: state.session.participants.map(p => ({
             ...p,
-            answeredCurrentQuestion: false,
+            answeredCurrentQuestion:
+              hasAnsweredCurrentQuestion && state.participantId !== null
+                ? p.participantId === state.participantId
+                : false,
           })),
         },
         currentQuestion: question,
         currentQuestionDuration: resolvedDuration,
         discussionIntroParticipantIds: deduplicatedIntroParticipantIds,
-        hasAnsweredCurrentQuestion: false,
+        hasAnsweredCurrentQuestion,
         teamVoteContext: null,
         teamResultsSnapshot: null,
       };
@@ -306,6 +329,16 @@ export const useSessionStore = create<SessionStore>((set, get) => ({
   recordAnswer: (participantId, questionId, choiceId, submittedAt, correct, pointsAwarded) => {
     set((state) => {
       if (!state.session) return state;
+      const existingAnswer = state.session.answers.some(
+        (entry) =>
+          entry.participantId === participantId &&
+          entry.questionId === questionId &&
+          typeof entry.choiceId === "string"
+      );
+      if (existingAnswer) {
+        return state;
+      }
+
       const answer: AnswerRecord = {
         participantId,
         questionId,
@@ -331,6 +364,16 @@ export const useSessionStore = create<SessionStore>((set, get) => ({
   recordTeamChoiceAnswer: (participantId, questionId, choiceId, submittedAt) => {
     set((state) => {
       if (!state.session) return state;
+      const existingAnswer = state.session.answers.some(
+        (entry) =>
+          entry.participantId === participantId &&
+          entry.questionId === questionId &&
+          typeof entry.choiceId === "string"
+      );
+      if (existingAnswer) {
+        return state;
+      }
+
       const answer: AnswerRecord = {
         participantId,
         questionId,
@@ -449,6 +492,29 @@ export const useSessionStore = create<SessionStore>((set, get) => ({
           },
         },
         teamResultsSnapshot: snapshot,
+      };
+    });
+  },
+
+  setTeamGraphSnapshot: (snapshot) => {
+    set((state) => {
+      if (!state.session || !snapshot) {
+        return state;
+      }
+
+      return {
+        session: {
+          ...state.session,
+          teamClusters: {
+            ...snapshot.teamClusters,
+          },
+          teamDiscussionQueue: {
+            ...snapshot.teamDiscussionQueue,
+          },
+          teamQuestionPrompts: {
+            ...snapshot.teamQuestionPrompts,
+          },
+        },
       };
     });
   },

@@ -229,6 +229,7 @@ export type PeerMessage =
       question?: PublicQuestion;
       questionIndex?: number;
       totalQuestions?: number;
+      startedAt?: number;
       questionDuration?: number;
       discussionIntroParticipantIds?: string[];
       leaderboard?: LeaderboardEntry[];
@@ -243,6 +244,11 @@ export type PeerMessage =
         groupedAnswers: TeamAnswerCluster[];
         discussionQueue: DiscussionQueueItem[];
         participants?: ParticipantDirectoryEntry[];
+      };
+      teamGraphSnapshot?: {
+        teamClusters: Record<string, TeamAnswerCluster[]>;
+        teamDiscussionQueue: Record<string, DiscussionQueueItem[]>;
+        teamQuestionPrompts: Record<string, string>;
       };
       participants?: ParticipantDirectoryEntry[];
     };

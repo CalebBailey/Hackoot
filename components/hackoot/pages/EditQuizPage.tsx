@@ -1,6 +1,6 @@
 "use client";
 
-import { DragEvent, useState, useEffect } from "react";
+import { DragEvent, useState, useEffect, useMemo } from "react";
 import { useQuizStore } from "@/store/quizStore";
 import { Button } from "../Button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -11,6 +11,7 @@ import { Choice, Quiz, Question, QuizType, TeamBuildingQuizSettings } from "@/ty
 import { generateUUID } from "@/lib/utils";
 import { exportQuiz } from "@/utils/quizStorage";
 import { sanitizeQuestionTimeLimit } from "@/utils/scoring";
+import { estimateQuizDurationFromQuestions, formatDurationFromSeconds } from "@/utils/quizDuration";
 import {
   DEFAULT_TEAM_BUILDING_SETTINGS,
   createEmptyQuestionForQuizType,
@@ -63,6 +64,11 @@ export function EditQuizPage({ quizId }: EditQuizPageProps) {
   const [originalQuiz, setOriginalQuiz] = useState<Quiz | null>(null);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const durationEstimate = useMemo(
+    () => estimateQuizDurationFromQuestions(questions),
+    [questions]
+  );
 
   useEffect(() => {
     const quiz = getQuizById(quizId);
@@ -375,7 +381,7 @@ export function EditQuizPage({ quizId }: EditQuizPageProps) {
         </h1>
         <Button variant="ghost" onClick={handleExport}>
           <Download className="w-5 h-5 mr-2" />
-          Export
+          Export JSON (Import)
         </Button>
       </div>
 
@@ -426,6 +432,15 @@ export function EditQuizPage({ quizId }: EditQuizPageProps) {
             <option value="standard" className="bg-slate-900 text-white">Standard</option>
             <option value="team-building" className="bg-slate-900 text-white">Team Building</option>
           </select>
+        </div>
+
+        <div className="rounded-lg border border-white/10 bg-white/[0.03] p-3">
+          <p className="text-sm font-medium text-[var(--text-primary)]">
+            Estimated quiz time: {formatDurationFromSeconds(durationEstimate.totalSeconds)}
+          </p>
+          <p className="text-xs text-[var(--text-secondary)] mt-1">
+            Questions: {formatDurationFromSeconds(durationEstimate.questionTimeSeconds)} + extra host discussion and transition buffer (30s per question + 3m per discussion question): {formatDurationFromSeconds(durationEstimate.extraTimeSeconds)}
+          </p>
         </div>
 
         {quizType === "team-building" && (

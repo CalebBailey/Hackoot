@@ -90,6 +90,14 @@ export function HostLobbyPage({ quizId }: HostLobbyPageProps) {
         const currentQuestion = qIdx !== null ? quiz?.questions[qIdx] : null;
         const leaderboard = useSessionStore.getState().getLeaderboard();
         const storeSnapshot = useSessionStore.getState();
+        const teamGraphSnapshot =
+          resolveQuizType(updatedSession.quizType) === "team-building"
+            ? {
+                teamClusters: updatedSession.teamClusters ?? {},
+                teamDiscussionQueue: updatedSession.teamDiscussionQueue ?? {},
+                teamQuestionPrompts: updatedSession.teamQuestionPrompts ?? {},
+              }
+            : undefined;
         const publicQuestion = currentQuestion
           ? currentQuestion.type === "mcq"
             ? (({ correctChoiceIds, ...question }) => question)(currentQuestion)
@@ -106,12 +114,18 @@ export function HostLobbyPage({ quizId }: HostLobbyPageProps) {
             participantId: participant.participantId,
             name: participant.name,
           })),
+          ...(teamGraphSnapshot
+            ? {
+                teamGraphSnapshot,
+              }
+            : {}),
           leaderboard,
           ...((updatedSession.state === "question" || updatedSession.state === "team-submission") && currentQuestion
             ? {
                 question: publicQuestion,
                 questionIndex: qIdx!,
                 totalQuestions: quiz?.questions.length ?? 0,
+                startedAt: updatedSession.questionStartedAt ?? undefined,
                 questionDuration: sanitizeQuestionTimeLimit(currentQuestion.timeLimit),
                 answeredCurrentQuestion: existingParticipant.answeredCurrentQuestion,
                 discussionIntroParticipantIds: storeSnapshot.discussionIntroParticipantIds,

@@ -80,7 +80,9 @@ export function PlayerResultPage() {
           message.questionIndex,
           runtimeQuestion,
           message.questionDuration,
-          message.discussionIntroParticipantIds ?? []
+          message.discussionIntroParticipantIds ?? [],
+          message.startedAt,
+          false
         );
         navigate("/play/question");
       } else if (message.type === "teamResultsPublished") {

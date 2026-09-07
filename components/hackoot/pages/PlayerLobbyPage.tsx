@@ -6,6 +6,7 @@ import { navigate } from "../HackootApp";
 import { Users, Wifi } from "lucide-react";
 import { PlayerPeer } from "@/transport/peer";
 import { PeerMessage, Question } from "@/types";
+import { clearPlayerResumeTarget, loadPlayerResumeTarget } from "@/utils/playerSession";
 
 function toRuntimeQuestion(message: Extract<PeerMessage, { type: "questionStarted" | "rejoinAck" }> ) {
   if (!message.question) {
@@ -34,6 +35,7 @@ export function PlayerLobbyPage() {
   const setSessionQuizType = useSessionStore((state) => state.setSessionQuizType);
   const setTeamVoteContext = useSessionStore((state) => state.setTeamVoteContext);
   const setTeamResultsSnapshot = useSessionStore((state) => state.setTeamResultsSnapshot);
+  const setTeamGraphSnapshot = useSessionStore((state) => state.setTeamGraphSnapshot);
   const setSessionParticipants = useSessionStore((state) => state.setSessionParticipants);
 
   const [participants, setParticipants] = useState<{ id: string; name: string }[]>([]);
@@ -66,10 +68,14 @@ export function PlayerLobbyPage() {
           message.questionIndex,
           runtimeQuestion,
           message.questionDuration,
-          message.discussionIntroParticipantIds ?? []
+          message.discussionIntroParticipantIds ?? [],
+          message.startedAt,
+          false
         );
         navigate("/play/question");
       } else if (message.type === "rejoinAck" && message.participantId === participantId) {
+        const resumeTarget = loadPlayerResumeTarget();
+
         if (message.participants?.length) {
           setSessionParticipants(message.participants);
         }
@@ -78,40 +84,73 @@ export function PlayerLobbyPage() {
           setSessionQuizType(message.quizType);
         }
 
+        if (message.teamGraphSnapshot) {
+          setTeamGraphSnapshot(message.teamGraphSnapshot);
+        }
+
+        const shouldPreferFinalScreen =
+          resumeTarget === "play/final" &&
+          (message.sessionState === "team-results" ||
+            message.sessionState === "team-discussion" ||
+            message.sessionState === "leaderboard" ||
+            message.sessionState === "ended");
+
+        if (shouldPreferFinalScreen) {
+          if (message.teamResultsSnapshot) {
+            setTeamResultsSnapshot(message.teamResultsSnapshot);
+          }
+          if (message.leaderboard) {
+            updateLeaderboard(message.leaderboard, 0);
+          }
+          setSessionState("ended");
+          clearPlayerResumeTarget();
+          navigate("/play/final");
+          return;
+        }
+
         // Restore the player to the correct point in the session
         if ((message.sessionState === "question" || message.sessionState === "team-submission") && message.question !== undefined) {
           const runtimeQuestion = toRuntimeQuestion(message);
           if (!runtimeQuestion) return;
-          setHasAnsweredCurrentQuestion(message.answeredCurrentQuestion ?? false);
+          const answeredCurrentQuestion = message.answeredCurrentQuestion ?? false;
+          setHasAnsweredCurrentQuestion(answeredCurrentQuestion);
           setCurrentQuestion(runtimeQuestion);
           setSessionState(message.sessionState);
           startQuestion(
             message.questionIndex!,
             runtimeQuestion,
             message.questionDuration,
-            message.discussionIntroParticipantIds ?? []
+            message.discussionIntroParticipantIds ?? [],
+            message.startedAt,
+            answeredCurrentQuestion
           );
+          clearPlayerResumeTarget();
           navigate("/play/question");
         } else if (message.sessionState === "team-voting") {
           if (message.teamVoteContext) {
             setTeamVoteContext(message.teamVoteContext);
           }
           setSessionState("team-voting");
+          clearPlayerResumeTarget();
           navigate("/play/voting");
         } else if (message.sessionState === "team-results" || message.sessionState === "team-discussion") {
           if (message.teamResultsSnapshot) {
             setTeamResultsSnapshot(message.teamResultsSnapshot);
           }
           setSessionState(message.sessionState);
+          clearPlayerResumeTarget();
           navigate("/play/result");
         } else if (
           message.sessionState === "reveal" ||
           message.sessionState === "leaderboard"
         ) {
           if (message.leaderboard) updateLeaderboard(message.leaderboard, message.score);
+          clearPlayerResumeTarget();
           navigate("/play/result");
         } else if (message.sessionState === "ended") {
           if (message.leaderboard) updateLeaderboard(message.leaderboard, 0);
+          setSessionState("ended");
+          clearPlayerResumeTarget();
           navigate("/play/final");
         }
         // sessionState === "lobby": already on this page, no action needed
@@ -128,6 +167,7 @@ export function PlayerLobbyPage() {
     setHasAnsweredCurrentQuestion,
     setSessionState,
     setSessionQuizType,
+    setTeamGraphSnapshot,
     setSessionParticipants,
     setTeamVoteContext,
     setTeamResultsSnapshot,
